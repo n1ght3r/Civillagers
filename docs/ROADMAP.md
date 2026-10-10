@@ -52,9 +52,9 @@ whatever is retained piles up with each one.
 
 | Tool | For |
 |---|---|
-| `runBenchmark` (ported from ThirstWasTaken2) | What the mod costs on a fixed seed: village ticks with 1 / 10 / 50 / 100 villages, one village's memory, guards on patrol and in combat beside vanilla villagers and iron golems; each budget below marked met or missed. See `src/dev/java/com/civillagers/dev/benchmark/AGENTS.md` |
+| `runBenchmark` (ported from ThirstWasTaken2) | What the mod costs on a fixed seed: village ticks with 1 / 10 / 50 / 100 villages, one village's memory, guards on patrol, in combat and with nobody near beside vanilla villagers and iron golems; each budget below marked met or missed. See `src/dev/java/com/civillagers/dev/benchmark/AGENTS.md` |
 | JFR (`-Pprofile`) | Hot methods and allocation sites |
-| Leak check | Open and close a singleplayer world 5 times, then `jcmd <pid> GC.class_histogram`: the `ServerLevel` and mod class instance counts must be 0 |
+| Leak check (`tools/agent/smoke/leak.jsonl`) | A driven client opens and leaves a world with guards and a bell 5 times, then takes the JVM's class histogram: no `ServerLevel`, no server, no `Guard`, nothing of the mod's world-bound packages. Vanilla keeps the last `ClientLevel` until the next world opens, so the last round removes the guards first |
 | Gametests | Every lifecycle rule has a test: create villages, stop the server, check every cache is empty |
 | `/civillagers debug stats` | Dev command: village count, the scheduler's mean and max tick time, cache sizes |
 
@@ -62,10 +62,12 @@ whatever is retained piles up with each one.
 
 | Scenario | Budget |
 |---|---|
-| 10 villages, ~100 villagers, ~20 guards, 3 builders working | ≤ 0.5 ms/tick mean, ≤ 2 ms max |
+| 10 villages, ~100 villagers, ~20 guards (a player near one village, the rest idle), 3 builders working | ≤ 0.5 ms/tick mean, ≤ 2 ms max |
+| 20 guards on patrol / in combat | ≤ 1× / ≤ 2× what 20 vanilla iron golems cost in the same run |
+| 20 guards with nobody near | ≤ 0.15 ms/tick mean |
 | A village in unloaded chunks | ~0 ms (not ticked) |
 | One village's data | ≤ ~4 KB in memory |
-| After opening and closing a world 5 times | 0 `ServerLevel` instances left |
+| After opening and closing a world 5 times | 0 `ServerLevel` and 0 `Guard` instances left |
 
 ---
 
@@ -78,12 +80,13 @@ met in `runBenchmark`. ✅ done, 🚧 in progress, ⬜ not started.
 ### Phase 0 — Foundation ✅
 - Multi-version layout (Fabric 26.3, 26.2, 1.21.1, NeoForge 1.21.1), CI, gametests, automatic dependency bumps.
 
-### Phase 1 — Village core and measurement ✅ (leak check by hand still to do)
+### Phase 1 — Village core and measurement ✅
 *Nothing a player sees, but everything after builds on it.*
 Status: everything below is in. On every node, 50 empty villages cost 0.007–0.026 ms/tick and 50 villages
 in unloaded chunks 0.0003 ms/tick (`runBenchmark`, 2026-10-10). One typical village keeps about
 3.4–3.8 KB, after member UUIDs were packed into `long` arrays and stockpile ids shared. The leak check
-needs a client and has not been run.
+(`tools/agent/smoke/leak.jsonl`, 2026-10-10) leaves no server level, no guard and nothing of the mod's
+world-bound classes on any node.
 - `VillageData` (`SavedData` per dimension): id, center, radius, villager UUIDs, level, stockpile (counts, not items).
 - Village detection from vanilla POIs (bell, beds, workstations); merging and splitting villages.
 - `VillageIndex`: the chunk → village index.
@@ -92,7 +95,7 @@ needs a client and has not been run.
 - Port `runBenchmark` and `/civillagers debug stats` from ThirstWasTaken2.
 - **Done when:** gametests for creating, saving, reloading and merging villages pass; the benchmark with 50 empty villages is ≤ 0.1 ms/tick; the leak check passes.
 
-### Phase 2 — Guards 🚧
+### Phase 2 — Guards ✅
 A `Guard` entity of its own (vanilla professions only change trades), on a `GoalSelector` (cheap, easy to
 control) rather than a `Brain`.
 
@@ -114,26 +117,33 @@ the head (option A of five drawn, chosen 2026-10-10); the same file on every ver
 | 2.6 | Sleep in a free bed at night; head for a raid | `aGuardFindsAFreeBed` | ✅ |
 | 2.7 | Guards counted per village (`Village.guards`) | `savesAndReloadsEveryField` | ✅ |
 | 2.7b | Spawn egg texture of its own | `tools/agent/shots/guard-egg.jsonl` on every client node | ✅ |
-| 2.8 | Decide the guard budget (see below) | this table | ⬜ |
-| 2.9 | Lighter AI with no player near: no patrol, no idle look, a slower scan, beyond 48 blocks of every player | benchmark scenario "guards, nobody near" | ⬜ |
-| 2.10 | Combat path budget: recompute only when the target moved more than 2 blocks, capped per tick | benchmark "guards in combat" | ⬜ |
-| 2.11 | Raise the shield against a ranged attacker or a creeper about to blow | gametest | ⬜ |
-| 2.12 | Accept crossbows (charge, shoot, crossbow pose) | gametest + agent shot | ⬜ |
-| 2.13 | Zombies and raiders single guards out as targets | gametest | ⬜ |
-| 2.14 | Leak check: open and close a world 5 times, `jcmd <pid> GC.class_histogram` shows no `Guard` | manual | ⬜ |
+| 2.8 | Decide the guard budget: against iron golems measured in the same run (see below) | `runBenchmark` budgets | ✅ |
+| 2.9 | Lighter AI with no player within 48 blocks: no patrol, no idle look, a scan every 40 ticks, and at rest the AI and movement one tick in four | `aGuardIdlesWithNobodyNear`, benchmark "guards, nobody near" | ✅ |
+| 2.10 | Combat path budget (`GuardCombatPath`): search again only when the target moved more than 2 blocks or the path ended, at most every 10 ticks, 8 searches per server tick | `aFightingGuardSearchesOnlyWhenItsTargetMoves`, benchmark "guards in combat" | ✅ |
+| 2.11 | Raise the shield against a target that shoots, until it is in reach, and against a creeper about to blow | `aGuardRaisesItsShieldAgainstArchersAndCreepers`, `shots/guards.jsonl` | ✅ |
+| 2.12 | Accept crossbows (charge, hold, shoot, the crossbow poses) | `aGuardShootsALoadedCrossbow`, `aGuardTakesACrossbowAndGivesItBackUnloaded`, `shots/guards.jsonl` | ✅ |
+| 2.13 | Zombies and raiders (not zombified piglins, drowned or witches) target guards as they target villagers (`MobMixin`) | `zombiesAndRaidersHuntGuards` | ✅ |
+| 2.14 | Leak check: open and leave a world with guards 5 times, then a class histogram: no `ServerLevel`, no `Guard`, nothing world-bound of the mod | `tools/agent/smoke/leak.jsonl` on every client node | ✅ |
 
-**Budget.** The first target was "20 guards ≤ 0.15 ms/tick". Measured around each guard's whole tick
-(its AI, its pathfinding, and the movement and collision vanilla does for any mob), on every node
-(2026-10-10): 20 guards cost 0.40–0.56 ms/tick on patrol and 0.75–1.12 ms in combat, about 20–28 µs per
-patrolling guard; with the same clock, 20 vanilla iron golems cost 0.46–0.69 ms and 20 vanilla villagers
-1.2–2.2 ms. A patrolling guard costs about an iron golem and a third to a quarter of a villager; 0.15 ms
-for 20 is below what any vanilla mob costs under this measurement. Proposal for 2.8: **a patrolling guard
-costs no more than a vanilla iron golem in the same scenario, 20 guards stay ≤ 0.6 ms/tick on patrol and
-≤ 1.2 ms in combat, and 2.9 brings guards nobody is near to ≤ 0.15 ms for 20.** Target scans stay at most
-one per 10 ticks (measured 0.76).
+**Budget (2.8, decided 2026-10-10).** The first target was "20 guards ≤ 0.15 ms/tick", below what any
+vanilla mob costs under this measurement: each guard's whole tick, its AI, its pathfinding and the
+movement and collision vanilla does for any mob. The budget is set against vanilla's closest mob, the
+iron golem, measured in the same run, so it does not depend on the machine:
+
+- 20 guards on patrol cost no more than 20 iron golems (ratio ≤ 1.0);
+- 20 guards in combat cost no more than twice as much (ratio ≤ 2.0);
+- 20 guards with nobody near cost ≤ 0.15 ms/tick (2.9);
+- target scans stay at most one per guard per 10 ticks.
+
+Measured with `runBenchmark -Pbenchmark=standard` on every node (2026-10-10): patrol 0.74–0.89× the
+golems (0.41–0.58 ms for 20, 21–29 µs a guard), combat 1.02–1.60× (0.59–0.92 ms), nobody near
+0.10–0.13 ms (about 5.5 µs a guard), 0.77 scans per 10 ticks. Vanilla's own profiler (`/perf`) splits a
+patrolling guard's tick the way it splits a golem's, AI about 38% and movement about 35%, so a guard on
+patrol is a golem's cost by nature; the quick profile's shorter window scatters by ±15% and has once read
+1.07 on NeoForge, so the standard profile's figures are the reference.
 
 **Done when:** 2.1–2.10 and 2.14 are done and their checks pass on every node; 2.11–2.13 may move to a
-later release.
+later release. Done 2026-10-10, 2.11–2.13 included.
 
 ### Phase 3 — Village chief ⬜
 One chief per village, a slow decision loop driven by needs, and a plan in the village data that guards
