@@ -94,9 +94,10 @@ its budget.
 | `com.civillagers.village` | The village as saved data: members, chief, stockpile, level, plans |
 | `com.civillagers.command` | `/civillagers`: `debug stats`, `debug here`, `debug scan` (`benchmark` comes from `src/dev`) |
 | `com.civillagers.entity` | `CivEntities` (registration) and the `Guard`; later the village chief and builder |
-| `com.civillagers.ai` | Goals: the guard's patrol, sleep, raid defence, target scan, melee and bow; later the chief's decisions |
+| `com.civillagers.ai` | Goals: the guard's patrol, sleep, raid defence, target scan, melee, bow, crossbow and shield, its budgeted paths, and the vanilla mobs that hunt guards; later the chief's decisions |
 | `com.civillagers.building` | Structure templates, build plans and step-by-step placement |
 | `com.civillagers.platform` | `Loader` (per loader) and `Vanilla` (per version): the seams |
+| `com.civillagers.mixin` | `MobMixin`: zombies and raiders get a target goal for guards |
 | `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version |
 
 ## Where to look

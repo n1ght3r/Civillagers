@@ -45,6 +45,13 @@ stonecutter parameters {
                     "import net.minecraft.world.entity.projectile.AbstractArrow;")
             replace("import net.minecraft.world.entity.animal.golem.IronGolem;",
                     "import net.minecraft.world.entity.animal.IronGolem;")
+            // And zombies into monster.zombie.
+            replace("import net.minecraft.world.entity.monster.zombie.Zombie;",
+                    "import net.minecraft.world.entity.monster.Zombie;")
+            replace("import net.minecraft.world.entity.monster.zombie.Drowned;",
+                    "import net.minecraft.world.entity.monster.Drowned;")
+            replace("import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;",
+                    "import net.minecraft.world.entity.monster.ZombifiedPiglin;")
         }
         // 1.21.2 renamed MobSpawnType, the reason passed to finalizeSpawn, to EntitySpawnReason.
         string(current.parsed < "1.21.2") {

@@ -3,6 +3,7 @@
   "package": "com.civillagers.mixin",
   "compatibilityLevel": "${java}",
   "mixins": [
+    "MobMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }
