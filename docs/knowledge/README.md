@@ -1,5 +1,7 @@
 # Knowledge graph
 
+<!-- AGENTS.md imports this file, so it loads in every session: keep it a short map. -->
+
 What the mod *is*, one concept per note, linked to each other and to the code. The `AGENTS.md` files say
 how to work in an area (build, test, seams); these notes say what the things in the game are, how they
 behave and why they were made that way. Read this map first, then follow links to the notes a task touches.

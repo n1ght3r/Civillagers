@@ -5,9 +5,8 @@ A villager civilization mod for **Minecraft 26.3, 26.2 and 1.21.1** on **Fabric*
 
 - Mod id and resource namespace: `civillagers`. Java package: `com.civillagers`.
 - The build layout follows ThirstWasTaken2 (`../ThirstWasTaken2`), trimmed to what this mod needs.
-- Every area below has its own `AGENTS.md`; read it before changing that area. Each has a `CLAUDE.md`
-  beside it that only imports it (`@AGENTS.md`), so Claude Code loads it too: edit `AGENTS.md`, and give
-  a new one its `CLAUDE.md`.
+- Every area below has its own `AGENTS.md`; read it before changing that area. These are the only
+  instruction files: no `CLAUDE.md`, which Claude Code would read *instead of* them.
 
 ## Build and run
 
@@ -103,6 +102,10 @@ its budget.
 | `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version |
 
 ## Where to look
+
+The map of the knowledge graph, loaded with this file (`@` imports it for agents that support it):
+
+@docs/knowledge/README.md
 
 - [docs/knowledge/README.md](docs/knowledge/README.md): the knowledge graph, one note per concept (the
   guard, its clothes, zombie guards, the village, decisions, glossary). Read the notes a task touches;
