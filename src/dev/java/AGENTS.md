@@ -22,7 +22,7 @@ Three tools:
 | `com.civillagers.dev.CivillagersDev` | The entrypoint both loaders call: registers the command, the tick, the autorun |
 | `com.civillagers.dev.benchmark` | The benchmark itself, loader independent |
 | `com.civillagers.dev.agent` | The agent: `core/` (plain Java), `game/` (any process), `client/` (clients only) |
-| `com.civillagers.dev.mixin` | `ServerLevelMixin`, which times each entity's tick for the benchmark; `GuardMixin`, which lets the benchmark tell guards whether a player is near; `MouseGrabMixin`, which keeps a driven client off the mouse |
+| `com.civillagers.dev.mixin` | `ServerLevelMixin`, which times each entity's tick for the benchmark; `CivVillagerMixin`, which lets the benchmark tell guards (and every villager of the mod) whether a player is near; `MouseGrabMixin`, which keeps a driven client off the mouse |
 | `com.civillagers.dev.platform.DevVanilla` | Where the dev tools alone meet a Minecraft version difference |
 | `src/dev/<loader>/.../platform/DevLoader` | The loader calls the mod's own `Loader` does not have, one copy per loader |
 | `src/dev/<loader>/.../<loader>/` | Each loader's entrypoint |

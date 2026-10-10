@@ -24,12 +24,27 @@ here and saying what it replaces; never just change the code against it.
 - **Villager type stored as an id string**: reads the same on 1.21.1 and 26.x, where the registry
   differs.
 
+## Structure and addons
+
+- **One base class, `CivVillager`, for every villager of the mod** (guard, later chief and builder):
+  look, voice, clothes, idling and saving are written once, and a role only adds its goals and state.
+  The base registers the shared goals in a `final` `registerGoals` and calls the role's
+  `registerRoleGoals`, so a role cannot skip the shared goals or the addon hook by accident.
+- **A loader-free addon API** in `com.civillagers.api`: plain listener lists (`Listeners`) instead of
+  Fabric's `Event` or NeoForge's bus, since common code never names a loader and an addon on either
+  loader then writes the same code. Fired by index, so a hook in a hot path allocates nothing.
+- **Data before code where it fits**: what a guard takes as a weapon is the item tag
+  `civillagers:guard_weapons`, so a datapack can change it without any code.
+- **Only registered types turn into zombies**: the type a zombie is cured into is named in its tag and
+  must be registered (`ZombieVillagers.register`), so a hand-written tag can never make the cure create
+  something that is not a villager of the mod.
+
 ## Zombie guard
 
 - **A vanilla zombie villager with an entity tag**, not a zombie guard entity of its own: vanilla's
   look, sounds, cure and its rules all come for free, the gear shows on the zombie, and no model,
-  renderer or save data is needed. The tag (`civillagers.zombie_guard`) is saved by vanilla on every
-  version. See [zombie-guard.md](zombie-guard.md).
+  renderer or save data is needed. The tag (`civillagers.zombie_of.<namespace>.<path>`) is saved by
+  vanilla on every version. See [zombie-guard.md](zombie-guard.md).
 - **Vanilla's odds** for a villager (Easy never, Normal half, Hard always), so a guard is no safer or
   weaker than the villagers it guards.
 - **The zombie never despawns**: it carries gear a player may have given.

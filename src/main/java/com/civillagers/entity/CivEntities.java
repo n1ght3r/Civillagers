@@ -44,6 +44,8 @@ public final class CivEntities {
                 Civillagers.id(GUARD), Vanilla.buildEntityType(EntityType.Builder.of(Guard::new, MobCategory.MISC)
                         .sized(0.6F, 1.95F).eyeHeight(1.62F).clientTrackingRange(10), GUARD)));
         Loader.registerAttributes(CivEntities::guard, Guard::createAttributes);
+        // A guard a zombie kills turns, as a villager does, and is cured back into a guard.
+        ZombieVillagers.register(CivEntities::guard);
 
         // Entity types register before items on both loaders, so the type is there for the egg. The egg
         // has a texture of its own on every version; before 1.21.5 vanilla still multiplies a spawn egg's

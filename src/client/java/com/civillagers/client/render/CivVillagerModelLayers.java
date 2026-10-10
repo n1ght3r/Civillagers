@@ -2,7 +2,8 @@ package com.civillagers.client.render;
 
 import com.civillagers.Civillagers;
 import com.civillagers.client.platform.ClientVanilla;
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.CivVillager;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.PartPose;
@@ -21,23 +22,24 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * What the guard looks like, the same on every Minecraft version: a villager's head, nose, body and robe
- * on a humanoid's two separate arms, drawn with vanilla's own villager texture. The model and renderer
- * classes around it differ between versions and live in {@code client/platform}.
+ * What every villager of the mod looks like (a guard today), the same on every Minecraft version: a
+ * villager's head, nose, body and robe on a humanoid's two separate arms, drawn with vanilla's own
+ * villager texture. The model and renderer classes around it differ between versions and live in
+ * {@code client/platform}.
  *
  * <p>The villager texture already has an arm and a hand where the crossed arms take them from: the arm at
- * (44, 22), 4x8x4, and the hands' bar at (40, 38). Each guard arm is that arm with half the bar below it
- * for a hand, twelve pixels long like a player's, so held items sit where they would in a player's hand.
+ * (44, 22), 4x8x4, and the hands' bar at (40, 38). Each arm is that arm with half the bar below it for a
+ * hand, twelve pixels long like a player's, so held items sit where they would in a player's hand.
  * The arms hang flush against the body, as a player's do; the robe, half a pixel wider, tucks under them.
  *
  * <p>That texture is a villager's bare body, in a grey shirt. Its clothes are a second texture drawn over
  * it on the same model, one per villager type ({@link #clothes}), as vanilla draws a villager's.
  */
-public final class GuardModelLayers {
-    public static final ModelLayerLocation BODY = new ModelLayerLocation(Civillagers.id("guard"), "main");
+public final class CivVillagerModelLayers {
+    public static final ModelLayerLocation BODY = new ModelLayerLocation(Civillagers.id("villager"), "main");
     /** Vanilla's villager texture, read by path from the game, never copied into the mod. */
     public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/villager/villager.png");
-    /** The clothes of vanilla's villager types, made once so that drawing a guard allocates nothing. Never changes. */
+    /** The clothes of vanilla's villager types, made once so that drawing a villager allocates nothing. Never changes. */
     private static final Map<String, Identifier> VANILLA_CLOTHES = new HashMap<>();
     static {
         for (String type : new String[] { "desert", "jungle", "plains", "savanna", "snow", "swamp", "taiga" }) {
@@ -48,7 +50,7 @@ public final class GuardModelLayers {
     /** A helmet is drawn this much taller, to cover the villager's head: ten pixels where a player's is eight. */
     public static final float HELMET_STRETCH = 10.0F / 8.0F;
 
-    private GuardModelLayers() { }
+    private CivVillagerModelLayers() { }
 
     public static LayerDefinition createBodyLayer() {
         MeshDefinition mesh = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
@@ -91,7 +93,7 @@ public final class GuardModelLayers {
         Identifier vanilla = VANILLA_CLOTHES.get(type);
         if (vanilla != null) return vanilla;
         Identifier id = Identifier.tryParse(type);
-        return id != null ? clothesTexture(id) : VANILLA_CLOTHES.get(Guard.DEFAULT_VILLAGER_TYPE);
+        return id != null ? clothesTexture(id) : VANILLA_CLOTHES.get(CivVillager.DEFAULT_VILLAGER_TYPE);
     }
 
     private static Identifier clothesTexture(Identifier type) {
@@ -99,21 +101,21 @@ public final class GuardModelLayers {
     }
 
     /**
-     * How the guard holds {@code arm}: drawing a bow while it fights with one, charging a crossbow or
+     * How {@code mob} holds {@code arm}: drawing a bow while it fights with one, charging a crossbow or
      * aiming a loaded one, raising a shield it is blocking with, holding out whatever else it carries, or
-     * hanging empty. Charging is the guard using the crossbow and loaded is the bolt the crossbow carries,
+     * hanging empty. Charging is the mob using the crossbow and loaded is the bolt the crossbow carries,
      * both of which the client knows, as it does for a pillager.
      */
-    public static HumanoidModel.ArmPose armPose(Guard guard, HumanoidArm arm) {
-        boolean main = arm == guard.getMainArm();
-        ItemStack held = main ? guard.getMainHandItem() : guard.getOffhandItem();
+    public static HumanoidModel.ArmPose armPose(Mob mob, HumanoidArm arm) {
+        boolean main = arm == mob.getMainArm();
+        ItemStack held = main ? mob.getMainHandItem() : mob.getOffhandItem();
         if (held.isEmpty()) return HumanoidModel.ArmPose.EMPTY;
-        if (main && guard.isAggressive() && held.getItem() instanceof BowItem) return HumanoidModel.ArmPose.BOW_AND_ARROW;
+        if (main && mob.isAggressive() && held.getItem() instanceof BowItem) return HumanoidModel.ArmPose.BOW_AND_ARROW;
         if (main && held.getItem() instanceof CrossbowItem) {
-            if (guard.isUsingItem() && guard.getUseItem() == held) return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
+            if (mob.isUsingItem() && mob.getUseItem() == held) return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
             if (CrossbowItem.isCharged(held)) return HumanoidModel.ArmPose.CROSSBOW_HOLD;
         }
-        if (guard.isUsingItem() && guard.getUseItem() == held && guard.isBlocking()) return HumanoidModel.ArmPose.BLOCK;
+        if (mob.isUsingItem() && mob.getUseItem() == held && mob.isBlocking()) return HumanoidModel.ArmPose.BLOCK;
         return HumanoidModel.ArmPose.ITEM;
     }
 }

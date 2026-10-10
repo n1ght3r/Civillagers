@@ -8,18 +8,21 @@ import net.minecraft.world.level.Level;
  * A {@link PathfinderMob} that saves values of its own beside what vanilla saves for every mob. Vanilla's
  * save hooks changed shape in 1.21.6, a {@code CompoundTag} before and {@code ValueOutput} and
  * {@code ValueInput} after, so a mob with data of its own extends this and overrides {@link #saveExtra}
- * and {@link #loadExtra} instead of those hooks.
+ * and {@link #loadExtra} instead of those hooks, calling {@code super} first so every class in between
+ * keeps its own.
  */
 public abstract class SavingMob extends PathfinderMob {
     protected SavingMob(EntityType<? extends SavingMob> type, Level level) {
         super(type, level);
     }
 
-    /** Writes what the mob keeps of its own. */
-    protected abstract void saveExtra(Output output);
+    /** Writes what the mob keeps of its own. Nothing here. */
+    protected void saveExtra(Output output) {
+    }
 
-    /** Reads back what {@link #saveExtra} wrote; a key never written reads as its fallback. */
-    protected abstract void loadExtra(Input input);
+    /** Reads back what {@link #saveExtra} wrote; a key never written reads as its fallback. Nothing here. */
+    protected void loadExtra(Input input) {
+    }
 
     public interface Output {
         void putString(String key, String value);

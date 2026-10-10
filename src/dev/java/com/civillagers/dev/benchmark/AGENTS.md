@@ -90,7 +90,7 @@ and at the guard budget's count, 20 vanilla villagers and 20 vanilla iron golems
 
 Nobody joins a benchmark, and a guard with no player within 48 blocks idles: no patrol, no looking around,
 fewer scans, and while it stands still it thinks one tick in four. So the patrol and combat scenarios
-tell every guard a player is near, through `PlayerPresence` and the dev mod's `GuardMixin`, and measure a
+tell every guard a player is near, through `PlayerPresence` and the dev mod's `CivVillagerMixin`, and measure a
 guard someone watches; "guards, nobody near" tells them no, and measures the idle guard. Every kind is timed from the
 outside, around each entity's whole tick, by `ServerLevelMixin` and `EntityTickTimer`: its AI, its
 pathfinding, and the movement and collision vanilla does for any mob. That is stricter than timing the

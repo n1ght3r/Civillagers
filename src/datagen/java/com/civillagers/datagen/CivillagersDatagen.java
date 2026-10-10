@@ -12,6 +12,7 @@ public final class CivillagersDatagen implements DataGeneratorEntrypoint {
     @Override
     public void onInitializeDataGenerator(FabricDataGenerator generator) {
         FabricDataGenerator.Pack pack = generator.createPack();
-        // pack.addProvider(CivillagersRecipeProvider::new); and so on, one provider per kind of file.
+        // One provider per kind of file.
+        pack.addProvider(CivItemTagProvider::new);
     }
 }

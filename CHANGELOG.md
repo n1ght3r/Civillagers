@@ -16,6 +16,9 @@
 - A guard a zombie kills can rise as a zombie villager that keeps its gear and clothes, with the odds a
   villager has (never on Easy, half the time on Normal, always on Hard). Cure it as a zombie villager,
   with weakness and a golden apple, and it comes back a guard.
+- For addons: `com.civillagers.api`, with hooks for guards' goals and targets and for turning into a zombie
+  and being cured, the item tag `civillagers:guard_weapons` (what a guard takes as a weapon), and
+  `CivVillager`, a base class for a villager of an addon's own. See `docs/knowledge/addon-api.md`.
 - Guards nobody is near (48 blocks) idle: they stop patrolling, look for targets less often and think one
   tick in four while they stand still. Path searches in a fight are capped and only follow a target that
   moved.

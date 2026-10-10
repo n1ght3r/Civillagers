@@ -8,7 +8,7 @@ import com.civillagers.ai.GuardSleepGoal;
 import com.civillagers.ai.GuardTargetGoal;
 import com.civillagers.entity.CivEntities;
 import com.civillagers.entity.Guard;
-import com.civillagers.entity.ZombieGuards;
+import com.civillagers.entity.ZombieVillagers;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
@@ -52,12 +52,12 @@ public final class GuardGameTest {
     public void aGuardTurnsWithAVillagersOdds(GameTestHelper helper) {
         RandomSource random = RandomSource.create(1L);
         for (int i = 0; i < 20; i++) {
-            TestFixtures.check(helper, !ZombieGuards.turns(Difficulty.PEACEFUL, random) && !ZombieGuards.turns(Difficulty.EASY, random),
+            TestFixtures.check(helper, !ZombieVillagers.turns(Difficulty.PEACEFUL, random) && !ZombieVillagers.turns(Difficulty.EASY, random),
                     "a guard never turns on Peaceful or Easy");
-            TestFixtures.check(helper, ZombieGuards.turns(Difficulty.HARD, random), "a guard always turns on Hard");
+            TestFixtures.check(helper, ZombieVillagers.turns(Difficulty.HARD, random), "a guard always turns on Hard");
         }
         int turned = 0;
-        for (int i = 0; i < 100; i++) if (ZombieGuards.turns(Difficulty.NORMAL, random)) turned++;
+        for (int i = 0; i < 100; i++) if (ZombieVillagers.turns(Difficulty.NORMAL, random)) turned++;
         TestFixtures.check(helper, turned > 20 && turned < 80, "a guard turns about half the time on Normal, not " + turned + " in 100");
         helper.succeed();
     }
@@ -71,9 +71,9 @@ public final class GuardGameTest {
         guard.equipGear(new ItemStack(Items.IRON_HELMET));
         guard.setCustomName(Component.literal("Gregor"));
 
-        ZombieVillager zombie = ZombieGuards.zombify(helper.getLevel(), guard);
+        ZombieVillager zombie = ZombieVillagers.zombify(helper.getLevel(), guard);
         TestFixtures.check(helper, zombie != null && guard.isRemoved(), "the guard should turn into a zombie villager");
-        TestFixtures.check(helper, zombie.entityTags().contains(ZombieGuards.TAG), "the zombie should remember it was a guard");
+        TestFixtures.check(helper, zombie.entityTags().contains(ZombieVillagers.tagFor(CivEntities.guard())), "the zombie should remember it was a guard");
         TestFixtures.check(helper, zombie.getMainHandItem().is(Items.DIAMOND_SWORD) && zombie.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
                 "the zombie should keep the guard's gear");
         TestFixtures.check(helper, Vanilla.villagerTypeOf(zombie, "").equals("minecraft:snow"), "the zombie should keep the guard's clothes");
@@ -95,7 +95,7 @@ public final class GuardGameTest {
             TestFixtures.check(helper, cured.getMainHandItem().is(Items.DIAMOND_SWORD) && cured.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
                     "the cured guard should keep its gear");
             TestFixtures.check(helper, cured.villagerType().equals("minecraft:snow"), "the cured guard should keep its clothes");
-            TestFixtures.check(helper, !cured.entityTags().contains(ZombieGuards.TAG), "the cured guard is no zombie any more");
+            TestFixtures.check(helper, !cured.entityTags().contains(ZombieVillagers.tagFor(CivEntities.guard())), "the cured guard is no zombie any more");
         });
     }
 
@@ -117,7 +117,7 @@ public final class GuardGameTest {
         }
         TestFixtures.check(helper, !drops && guard.isRemoved(), "on Hard a guard a zombie kills should turn, dropping nothing");
         List<ZombieVillager> risen = helper.getLevel().getEntitiesOfClass(ZombieVillager.class, guard.getBoundingBox().inflate(1.0),
-                found -> found.entityTags().contains(ZombieGuards.TAG));
+                found -> found.entityTags().contains(ZombieVillagers.tagFor(CivEntities.guard())));
         TestFixtures.check(helper, risen.size() == 1 && risen.get(0).getMainHandItem().is(Items.IRON_SWORD),
                 "the guard should rise as a zombie villager with its sword");
         helper.succeed();
@@ -127,7 +127,7 @@ public final class GuardGameTest {
     public void anOrdinaryZombieVillagerIsLeftToVanilla(GameTestHelper helper) {
         TestFixtures.floor(helper, 1);
         ZombieVillager zombie = helper.spawnWithNoFreeWill(Vanilla.zombieVillagerType(), GUARD);
-        TestFixtures.check(helper, ZombieGuards.cure(helper.getLevel(), zombie) == null && !zombie.isRemoved(),
+        TestFixtures.check(helper, ZombieVillagers.cure(helper.getLevel(), zombie) == null && !zombie.isRemoved(),
                 "a zombie villager that was never a guard is cured into a villager, as in vanilla");
         helper.succeed();
     }

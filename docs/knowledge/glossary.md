@@ -5,8 +5,11 @@ it here, and say why in [decisions.md](decisions.md) if it was a choice.
 
 | Term | Meaning | In game (en / vi) | Note |
 |---|---|---|---|
+| villager of the mod, `CivVillager` | The base every role extends: guard, later chief and builder | | [civ-villager.md](civ-villager.md) |
+| role | What a `CivVillager` does: its goals and state on top of the base | | [civ-villager.md](civ-villager.md) |
 | guard | The mod's villager who fights | Villager Guard / Lính gác | [guard.md](guard.md) |
-| zombie guard | A zombie villager that was a guard, tagged `civillagers.zombie_guard` | (a Zombie Villager) | [zombie-guard.md](zombie-guard.md) |
+| zombie guard | A zombie villager that was a guard, tagged `civillagers.zombie_of.civillagers.guard` | (a Zombie Villager) | [zombie-guard.md](zombie-guard.md) |
+| addon API, hook, listener | `com.civillagers.api`: what other mods use; a hook is one `Listeners` list | | [addon-api.md](addon-api.md) |
 | villager type | The biome a villager's clothes come from: `minecraft:plains`, `snow`, ... | | [villager-type.md](villager-type.md) |
 | clothes | The `type/<type>.png` texture drawn over the bare villager body | | [villager-type.md](villager-type.md) |
 | gear | What a guard holds and wears: weapon, shield, armor | | [guard.md](guard.md) |

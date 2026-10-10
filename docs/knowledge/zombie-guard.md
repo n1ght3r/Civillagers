@@ -1,6 +1,8 @@
 # Zombie guard
 
-A [guard](guard.md) a zombie kills can rise as a zombie, as a villager does, and be cured back.
+A [guard](guard.md) a zombie kills can rise as a zombie, as a villager does, and be cured back. The
+same works for any [CivVillager](civ-villager.md) whose type is registered for it: the guard is, and an
+addon's villager can be (`CivillagersApi.turnsIntoZombie`).
 
 ## In game
 
@@ -20,15 +22,17 @@ A [guard](guard.md) a zombie kills can rise as a zombie, as a villager does, and
 
 | What | Where |
 |---|---|
-| The rules: odds, turning, curing | [entity/ZombieGuards.java](../../src/main/java/com/civillagers/entity/ZombieGuards.java) |
-| A zombie kills a guard | `mixin/ZombieMixin`, at the head of `Zombie.killedEntity`, where vanilla turns villagers |
+| The rules: which types turn, odds, turning, curing | [entity/ZombieVillagers.java](../../src/main/java/com/civillagers/entity/ZombieVillagers.java) |
+| A zombie kills a villager of the mod | `mixin/ZombieMixin`, at the head of `Zombie.killedEntity`, where vanilla turns villagers |
 | A cure finishes | `mixin/ZombieVillagerMixin`, at the head of `ZombieVillager.finishConversion` |
 | Conversion across versions | `Vanilla.convert`, `Vanilla.zombieVillagerType`, `Vanilla.villagerTypeOf`, `Vanilla.setVillagerType` |
-| Tests | `aGuardTurnsWithAVillagersOdds`, `aGuardAZombieKillsOnHardRisesAsAZombie`, `aZombieGuardKeepsItsGearAndIsCuredBackToAGuard`, `anOrdinaryZombieVillagerIsLeftToVanilla` in [GuardGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardGameTest.java) |
+| Hooks for addons | `CivVillagerEvents.TURNED_ZOMBIE`, `CivVillagerEvents.CURED` ([addon-api.md](addon-api.md)) |
+| Tests | `aGuardTurnsWithAVillagersOdds`, `aGuardAZombieKillsOnHardRisesAsAZombie`, `aZombieGuardKeepsItsGearAndIsCuredBackToAGuard`, `anOrdinaryZombieVillagerIsLeftToVanilla` in [GuardGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardGameTest.java); `turningAndCuringCallTheirListeners` in [AddonApiGameTest.java](../../src/gametest/java/com/civillagers/gametest/AddonApiGameTest.java) |
 
-**How a zombie remembers it was a guard**: the entity tag `civillagers.zombie_guard` (`ZombieGuards.TAG`),
-the scoreboard tag `/tag` shows. Vanilla saves it with the entity on every version, so no data of the
-mod's own is needed. The cure removes it. A zombie villager without it is cured by vanilla, into a villager.
+**How a zombie remembers what it was**: an entity tag, the scoreboard tag `/tag` shows, naming the type:
+`civillagers.zombie_of.civillagers.guard` for a guard (`ZombieVillagers.tagFor`). Vanilla saves it with
+the entity on every version, so no data of the mod's own is needed. The cure removes it. A zombie
+villager without one, or naming a type that is not registered, is cured by vanilla, into a villager.
 
 A conversion makes a new entity with a new UUID. The [village](village.md) finds its guards again on its
 next recount, so nothing has to be moved by hand.
@@ -36,5 +40,6 @@ next recount, so nothing has to be moved by hand.
 ## Related
 
 - [guard.md](guard.md)
+- [civ-villager.md](civ-villager.md)
 - [villager-type.md](villager-type.md)
 - [decisions.md](decisions.md): why a vanilla zombie villager rather than an entity of its own.

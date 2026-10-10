@@ -94,12 +94,13 @@ its budget.
 | `com.civillagers` | `Civillagers`, the mod's entry point, called by each loader's entrypoint |
 | `com.civillagers.village` | The village as saved data: members, chief, stockpile, level, plans |
 | `com.civillagers.command` | `/civillagers`: `debug stats`, `debug here`, `debug scan` (`benchmark` comes from `src/dev`) |
-| `com.civillagers.entity` | `CivEntities` (registration), the `Guard` and `ZombieGuards`; later the village chief and builder |
+| `com.civillagers.entity` | `CivEntities` (registration); `CivVillager`, the base of every villager of the mod; the `Guard`; `ZombieVillagers`; later the village chief and builder |
+| `com.civillagers.api` | What addons build on: events, tags, registrations. Kept stable; changes go in the changelog. See [docs/knowledge/addon-api.md](docs/knowledge/addon-api.md) |
 | `com.civillagers.ai` | Goals: the guard's patrol, sleep, raid defence, target scan, melee, bow, crossbow and shield, its budgeted paths, and the vanilla mobs that hunt guards; later the chief's decisions |
 | `com.civillagers.building` | Structure templates, build plans and step-by-step placement |
 | `com.civillagers.platform` | `Loader` (per loader) and `Vanilla` (per version): the seams |
 | `com.civillagers.mixin` | `MobMixin`: zombies and raiders get a target goal for guards. `ZombieMixin`, `ZombieVillagerMixin`: zombie guards and their cure |
-| `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version |
+| `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version (`CivVillagerModel`, `CivVillagerRenderer`, shared by every villager of the mod) |
 
 ## Where to look
 
@@ -108,7 +109,7 @@ The map of the knowledge graph, loaded with this file (`@` imports it for agents
 @docs/knowledge/README.md
 
 - [docs/knowledge/README.md](docs/knowledge/README.md): the knowledge graph, one note per concept (the
-  guard, its clothes, zombie guards, the village, decisions, glossary). Read the notes a task touches;
+  base class, the guard, its clothes, zombie guards, the addon API, the village, decisions, glossary). Read the notes a task touches;
   a change to a concept updates its note in the same commit.
 - [docs/ROADMAP.md](docs/ROADMAP.md): the phases, and the performance and memory rules with budgets.
 - [src/main/java/com/civillagers/platform/AGENTS.md](src/main/java/com/civillagers/platform/AGENTS.md): the loader and version seams.

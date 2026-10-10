@@ -44,8 +44,8 @@ public static Foo foo(Bar bar) {
   `stonecutter.gradle.kts` instead, so no code has to know about it.
 - When a difference reshapes a whole class rather than a call, the class itself lives under `platform/`
   with its `//?` blocks around the class body: `platform/SavingMob`, which a mob with saved values of
-  its own extends because vanilla's save hooks changed shape in 1.21.6, and `client/platform/GuardModel`
-  and `GuardRenderer`, whose type parameters and overridden methods changed with 1.21.2's render states.
-  Keep what does not differ outside, in `client/render`.
+  its own extends because vanilla's save hooks changed shape in 1.21.6, and
+  `client/platform/CivVillagerModel` and `CivVillagerRenderer`, whose type parameters and overridden
+  methods changed with 1.21.2's render states. Keep what does not differ outside, in `client/render`.
 - The file on disk is in the state of the **active** node (`26.3.x`). Edit it in that state and run
   `./gradlew "Reset active project"` before committing.

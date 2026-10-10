@@ -24,8 +24,10 @@ behave and why they were made that way. Read this map first, then follow links t
                     │ members, guards (UUIDs), bells  │
                     └───────────────┬─────────────────┘
                                     │ counts
- villager-type ── wears ──►       guard       ◄── hunted by ── zombies, raiders
-   (biome clothes)                  │
+ villager-type ── wears ──►   civ-villager   ◄── extends ── addon-api
+   (biome clothes)                  │ is a
+                                    ▼
+                                  guard       ◄── hunted by ── zombies, raiders
                                     │ killed by a zombie / cured
                                     ▼
                               zombie-guard
@@ -33,10 +35,12 @@ behave and why they were made that way. Read this map first, then follow links t
 
 | Note | What |
 |---|---|
+| [civ-villager.md](civ-villager.md) | The base class every villager of the mod shares, and how to add a role |
 | [guard.md](guard.md) | The guard: a villager who fights. Stats, gear, AI, idling, who hunts it |
 | [villager-type.md](villager-type.md) | The biome a villager's clothes come from, and how a guard wears them |
 | [zombie-guard.md](zombie-guard.md) | A guard a zombie kills rises as a zombie villager; cured, it is a guard again |
 | [village.md](village.md) | The village as saved data: bells, members, guards, scheduling |
+| [addon-api.md](addon-api.md) | What another mod builds on: events, tags, registrations |
 | [decisions.md](decisions.md) | Design decisions and naming rules, with their reasons |
 | [glossary.md](glossary.md) | The words the code, the docs and the lang files use, in English and Vietnamese |
 

@@ -106,7 +106,7 @@ public final class GuardSleepGoal extends Goal {
     }
 
     private boolean wantsToSleep(ServerLevel level) {
-        return Vanilla.isNight(level) && guard.getTarget() == null && !GuardRaidGoal.raidNear(guard);
+        return Vanilla.isNight(level) && guard.getTarget() == null && guard.raidCenter() == null;
     }
 
     /**
