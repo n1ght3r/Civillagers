@@ -39,7 +39,8 @@ public final class GuardTargetGoal extends TargetGoal {
 
     @Override
     public boolean canUse() {
-        if (guard.getTarget() != null || guard.tickCount < nextScan) return false;
+        // A guard with no weapon goes after nothing: it is a civilian until it is armed again.
+        if (guard.getTarget() != null || guard.tickCount < nextScan || !guard.isCombatant()) return false;
         int interval = guard.playerNear() ? SCAN_INTERVAL : IDLE_SCAN_INTERVAL;
         nextScan = guard.tickCount + interval + guard.getRandom().nextInt(SCAN_JITTER + 1);
         GuardStats.recordScan();

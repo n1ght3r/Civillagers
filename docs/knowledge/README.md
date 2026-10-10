@@ -25,7 +25,8 @@ behave and why they were made that way. Read this map first, then follow links t
                     └───────────────┬─────────────────┘
                                     │ counts
  villager-type ── wears ──►   civ-villager   ◄── extends ── addon-api
-   (biome clothes)                  │ is a
+   (biome clothes)                  │    └── lives ──► villager-life
+                                    │ is a              (flee, hide, meet, celebrate)
                                     ▼
                                   guard       ◄── hunted by ── zombies, raiders
                                     │ killed by a zombie / cured
@@ -36,6 +37,7 @@ behave and why they were made that way. Read this map first, then follow links t
 | Note | What |
 |---|---|
 | [civ-villager.md](civ-villager.md) | The base class every villager of the mod shares, and how to add a role |
+| [villager-life.md](villager-life.md) | What they do as villagers do (flee, hide, meet, celebrate, say no), and what they leave out |
 | [guard.md](guard.md) | The guard: a villager who fights. Stats, gear, AI, idling, who hunts it |
 | [villager-type.md](villager-type.md) | The biome a villager's clothes come from, and how a guard wears them |
 | [zombie-guard.md](zombie-guard.md) | A guard a zombie kills rises as a zombie villager; cured, it is a guard again |

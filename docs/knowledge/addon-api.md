@@ -15,9 +15,10 @@ changelog; the rest of the mod may change in any release.
 | A villager of the addon's own | Extend [CivVillager](civ-villager.md); draw it with `CivVillagerRenderer` |
 | Make it turn into a zombie villager and be cured back | `CivillagersApi.turnsIntoZombie(type)` |
 
-Beside the `api` package, `CivVillager` and the public methods of `Guard` (`goesAfter`, `findThreat`,
-`raidCenter`, `equipGear`, `takeGear`, `gearSlot`, `villagerType`, `playerNear`, ...) are kept stable for
-addons.
+Beside the `api` package, `CivVillager` (`villagerType`, `playerNear`, `isCombatant`, `raidCenter`,
+`raidWon`, `alarmBell`, `refuse`, ...) and the public methods of `Guard` (`goesAfter`, `findThreat`,
+`equipGear`, `takeGear`, `gearSlot`, ...) are kept stable for addons. A villager of an addon's own decides
+whether it fights by overriding `isCombatant()`.
 
 ## Rules for listeners
 

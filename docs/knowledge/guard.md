@@ -17,7 +17,11 @@ covers only what makes it a guard.
   shield or an armor piece on it to hand it over (getting the old one back); sneaking with an empty hand
   takes gear back, one piece per use. Gear a player gave always drops when it dies. Bows and crossbows
   need no arrows.
-- **Day**: patrols the village it stands in. **Night**: sleeps in a free bed. **Raid**: heads for it.
+- **Day**: patrols the village it stands in, and in the late morning meets the villagers at the bell.
+  **Night**: sleeps in a free bed. **Raid**: heads for it, and celebrates when it is won. **Bell**: runs
+  to it. See [villager-life.md](villager-life.md).
+- **Unarmed**: with no weapon it is a civilian: it fights nothing, runs from zombies and raiders, and
+  hides when the bell rings. A click with an empty hand makes it shake its head.
 - **Fights** hostile mobs it sees within 16 blocks, and whatever hurts it; calls nearby guards when hurt.
   Leaves neutral mobs alone, and creepers to guards with a bow or crossbow; an addon can change that
   (`GuardEvents.IS_THREAT`). Raises its shield against archers and against a creeper about to blow.
@@ -44,6 +48,7 @@ covers only what makes it a guard.
 ## Related
 
 - [civ-villager.md](civ-villager.md): what it is built on.
+- [villager-life.md](villager-life.md): what it does as a villager does.
 - [addon-api.md](addon-api.md): what other mods can change.
 - [villager-type.md](villager-type.md): its clothes.
 - [zombie-guard.md](zombie-guard.md): what a zombie does to it, and the cure.

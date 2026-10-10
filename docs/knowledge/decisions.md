@@ -39,6 +39,14 @@ here and saying what it replaces; never just change the code against it.
   must be registered (`ZombieVillagers.register`), so a hand-written tag can never make the cure create
   something that is not a villager of the mod.
 
+- **Villager behaviour as goals of its own, not by extending `Villager`**: `Villager` runs on a `Brain`
+  that would fight the guard's goals for control (it flees zombies a guard should fight), vanilla treats
+  anything that is a `Villager` as one in hundreds of places (trades, job sites, witches, golems), its
+  `Brain` costs more than the budget allows, and its internals differ most between 1.21.1 and 26.x. Each
+  behaviour that fits is a cheap goal on `CivVillager` instead. See [villager-life.md](villager-life.md).
+- **A guard is a combatant only while armed**: a disarmed guard behaves as a villager does, so taking its
+  weapon is how a player stands it down, and it is never a fighter with its fists.
+
 ## Zombie guard
 
 - **A vanilla zombie villager with an entity tag**, not a zombie guard entity of its own: vanilla's

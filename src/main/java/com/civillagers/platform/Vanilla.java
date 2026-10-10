@@ -55,6 +55,17 @@ public final class Vanilla {
     }
 
     /**
+     * The time of day in {@code level}, 0 to 23999, as villagers keep their schedule: 0 is sunrise, 6000
+     * noon. 26.1 reads it from the level's default clock.
+     */
+    public static int timeOfDay(Level level) {
+        //? if >=26.1 {
+        return (int) (level.getDefaultClockTime() % 24000L);
+        //?} else
+        //return (int) (level.getDayTime() % 24000L);
+    }
+
+    /**
      * The id of the villager type for the biome at {@code pos}, such as {@code minecraft:plains}: what a
      * villager born there would wear. 1.21.11 moved villager types into a data-driven registry looked up
      * by key.

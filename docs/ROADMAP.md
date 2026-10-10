@@ -127,6 +127,7 @@ the head (option A of five drawn, chosen 2026-10-10); the same file on every ver
 | 2.15 | A villager's 20 health; named Villager Guard; the clothes of its biome's villager type (saved, synced, drawn as a layer over vanilla's `type/<biome>.png`) | `aNewGuardCarriesASword`, `aGuardWearsTheClothesOfItsBiome`, `shots/guards.jsonl` | ✅ |
 | 2.16 | A guard a zombie kills rises as a vanilla zombie villager with its gear (villager odds); cured, it is a guard again (`ZombieGuards`, since 2.17 `ZombieVillagers`; `ZombieMixin`, `ZombieVillagerMixin`) | `aGuardTurnsWithAVillagersOdds`, `aGuardAZombieKillsOnHardRisesAsAZombie`, `aZombieGuardKeepsItsGearAndIsCuredBackToAGuard`, `anOrdinaryZombieVillagerIsLeftToVanilla` | ✅ |
 | 2.17 | `CivVillager`, the base the chief and builders will extend (look, clothes, idling, saving, zombies, renderer); an addon API in `com.civillagers.api` (goal and threat hooks, zombie hooks, `civillagers:guard_weapons`) | `AddonApiGameTest`, every `GuardGameTest` | ✅ |
+| 2.18 | Villager life: civilians (a disarmed guard) flee and hide, an armed guard rallies to a rung bell, all meet at the bell in vanilla's hours, celebrate a won raid and shake their heads; trades, breeding, gossip, golems, witches left out (`docs/knowledge/villager-life.md`) | `VillagerLifeGameTest` | ✅ |
 
 **Budget (2.8, decided 2026-10-10).** The first target was "20 guards ≤ 0.15 ms/tick", below what any
 vanilla mob costs under this measurement: each guard's whole tick, its AI, its pathfinding and the

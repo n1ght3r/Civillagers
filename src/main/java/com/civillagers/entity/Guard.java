@@ -5,15 +5,14 @@ import com.civillagers.ai.GuardCrossbowGoal;
 import com.civillagers.ai.GuardMeleeGoal;
 import com.civillagers.ai.GuardPatrolGoal;
 import com.civillagers.ai.GuardRaidGoal;
+import com.civillagers.ai.GuardRallyGoal;
 import com.civillagers.ai.GuardShieldGoal;
 import com.civillagers.ai.GuardSleepGoal;
 import com.civillagers.ai.GuardTargetGoal;
 import com.civillagers.api.CivTags;
 import com.civillagers.api.GuardEvents;
 import com.civillagers.api.Verdict;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
@@ -32,7 +31,6 @@ import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -57,6 +55,11 @@ import java.util.function.Predicate;
  * it gear by using the item on it, and takes gear back by using an empty hand while sneaking, one piece per
  * use. Out of combat it regains health slowly.
  *
+ * <p>A guard is a {@linkplain #isCombatant() combatant} only while it holds a weapon. Disarmed, it is a
+ * villager like any other: it flees from zombies and raiders and hides when the bell rings, and if it is
+ * hurt it calls the guards near it but does not fight back. Armed, it runs to a bell that rings
+ * ({@link GuardRallyGoal}) instead of hiding.
+ *
  * <p>What a guard costs is kept within the budget in docs/ROADMAP.md: it looks for targets at most once
  * every {@link GuardTargetGoal#SCAN_INTERVAL} ticks, in a bounded box, and starts new paths within a
  * per-tick cap. Idle with nobody near, as every {@link CivVillager} is, it also stops patrolling and looks
@@ -72,15 +75,9 @@ public class Guard extends CivVillager {
     private static final double THREAT_HEIGHT = 6.0;
     /** Ticks between two points of health regained out of combat. */
     private static final int REGEN_INTERVAL = 80;
-    /** Ticks between two raid lookups by one guard. */
-    private static final int RAID_CHECK_INTERVAL = 40;
 
     /** The first filter on what a scan returns; {@link #goesAfter} does the rest. No capture, so no allocation. */
     private static final Predicate<Mob> MAY_THREATEN = mob -> mob instanceof Enemy && mob.isAlive();
-
-    /** The tick count from which to look for a raid again, and what the last look found. */
-    private int raidCheckTick;
-    private BlockPos raidCenter;
 
     public Guard(EntityType<? extends Guard> type, Level level) {
         super(type, level);
@@ -99,6 +96,7 @@ public class Guard extends CivVillager {
         // No flags, so it runs beside the fight; added after it so that it turns the head last.
         goalSelector.addGoal(2, new GuardShieldGoal(this));
         goalSelector.addGoal(3, new GuardRaidGoal(this));
+        goalSelector.addGoal(3, new GuardRallyGoal(this));
         goalSelector.addGoal(4, new GuardSleepGoal(this));
         goalSelector.addGoal(6, new GuardPatrolGoal(this));
 
@@ -107,6 +105,12 @@ public class Guard extends CivVillager {
         targetSelector.addGoal(1, new HurtByTargetGoal(this, Guard.class, Villager.class, IronGolem.class)
                 .setAlertOthers(Guard.class));
         targetSelector.addGoal(2, new GuardTargetGoal(this));
+    }
+
+    /** A guard fights while it holds a weapon ({@link CivTags#GUARD_WEAPONS}); without one it is a civilian. */
+    @Override
+    public boolean isCombatant() {
+        return getMainHandItem().is(CivTags.GUARD_WEAPONS);
     }
 
     @Override
@@ -120,11 +124,16 @@ public class Guard extends CivVillager {
         GuardStats.recordGuardTick(System.nanoTime() - start);
     }
 
-    /** Regains 1 health every {@link #REGEN_INTERVAL} ticks while it has nothing to fight, even at rest. */
+    /**
+     * Regains 1 health every {@link #REGEN_INTERVAL} ticks while it has nothing to fight, even at rest. A
+     * guard with no weapon lets go of its target: being hurt still calls the guards near it, then it flees.
+     */
     @Override
     public void aiStep() {
-        if (!level().isClientSide() && tickCount % REGEN_INTERVAL == 0 && getTarget() == null
-                && getHealth() < getMaxHealth()) heal(1.0F);
+        if (!level().isClientSide()) {
+            if (getTarget() != null && !isCombatant()) setTarget(null);
+            if (tickCount % REGEN_INTERVAL == 0 && getTarget() == null && getHealth() < getMaxHealth()) heal(1.0F);
+        }
         super.aiStep();
     }
 
@@ -179,21 +188,6 @@ public class Guard extends CivVillager {
         if (!(mob instanceof Enemy) || !mob.isAlive() || mob.isInvisible()) return false;
         if (mob instanceof NeutralMob) return false;
         return ranged || !(mob instanceof Creeper);
-    }
-
-    /**
-     * The center of the active raid where the guard stands, or null. Looked up at most once every
-     * {@link #RAID_CHECK_INTERVAL} ticks; the answer also keeps the guard out of bed.
-     */
-    public BlockPos raidCenter() {
-        ServerLevel level = serverLevel();
-        if (level == null) return null;
-        if (tickCount >= raidCheckTick) {
-            raidCheckTick = tickCount + RAID_CHECK_INTERVAL;
-            Raid raid = level.getRaidAt(blockPosition());
-            raidCenter = raid != null && raid.isActive() ? raid.getCenter() : null;
-        }
-        return raidCenter;
     }
 
     // Weapons.
@@ -275,8 +269,11 @@ public class Guard extends CivVillager {
     protected InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack held = player.getItemInHand(hand);
         if (held.isEmpty()) {
-            if (!player.isSecondaryUseActive()) return super.mobInteract(player, hand);
-            if (!level().isClientSide()) give(player, takeGear());
+            // An empty hand: sneaking takes gear back, otherwise the guard has nothing to trade.
+            if (!level().isClientSide()) {
+                if (player.isSecondaryUseActive()) give(player, takeGear());
+                else refuse();
+            }
             return InteractionResult.SUCCESS;
         }
         if (gearSlot(held) == null) return super.mobInteract(player, hand);

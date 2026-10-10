@@ -1,8 +1,13 @@
 package com.civillagers.entity;
 
+import com.civillagers.ai.CivCelebrateGoal;
+import com.civillagers.ai.CivHideGoal;
+import com.civillagers.ai.CivMeetGoal;
+import com.civillagers.ai.CivPanicGoal;
 import com.civillagers.api.CivVillagerEvents;
 import com.civillagers.platform.SavingMob;
 import com.civillagers.platform.Vanilla;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -26,9 +31,13 @@ import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.phys.AABB;
+
+import java.util.List;
 
 /**
  * What every villager of the mod's own shares, the guard today and the builder and chief later: a
@@ -38,7 +47,16 @@ import net.minecraft.world.level.ServerLevelAccessor;
  *
  * <ul>
  *   <li><b>Looks and sounds</b> like a villager: villager sounds, a villager's 20 health, never
- *       despawns, opens doors, picks nothing up.</li>
+ *       despawns, opens doors, picks nothing up, shakes its head when it has nothing for a player
+ *       ({@link #refuse()}).</li>
+ *   <li><b>Lives</b> like a villager: meets the others at the village bell in vanilla's meeting hours
+ *       and looks at them as it talks ({@link CivMeetGoal}), and celebrates a raid the village won
+ *       ({@link CivCelebrateGoal}).</li>
+ *   <li><b>Civilian or combatant</b>: one that does not fight ({@link #isCombatant()} false: a builder,
+ *       or a guard with no weapon) flees from zombies and raiders and panics when hurt
+ *       ({@link CivPanicGoal}), and hides at home when the bell rings or a raid comes
+ *       ({@link CivHideGoal}), as a villager does. A combatant stands its ground; its role decides what
+ *       it does instead.</li>
  *   <li><b>Villager type</b>: taken from the biome it spawns in, saved and synced, so clients draw its
  *       clothes. See docs/knowledge/villager-type.md.</li>
  *   <li><b>Idles</b> with no player within {@link #ACTIVE_RANGE}: the look-around goals stop, and while
@@ -51,8 +69,9 @@ import net.minecraft.world.level.ServerLevelAccessor;
  *       villager when a zombie kills it, as a villager does, and is cured back.</li>
  * </ul>
  *
- * <p>Goal priorities 0 (floating), 5 (doors), 7 and 8 (looking around) are taken here; a role uses the
- * others.
+ * <p>Goal priorities taken here: 0 floating, 1 panic, 2 hiding, 3 celebrating, 5 doors, 6 meeting, 7 and
+ * 8 looking around. A role adds its own beside them; one that shares a priority with a goal here never
+ * cuts it short.
  */
 public abstract class CivVillager extends SavingMob {
     /** Beyond this distance from every player, in blocks, a villager of the mod idles. */
@@ -62,6 +81,14 @@ public abstract class CivVillager extends SavingMob {
     private static final int PRESENCE_JITTER = 10;
     /** At rest, the AI and movement run one tick in this many. Even, so it lands on vanilla's full AI ticks. */
     protected static final int REST_EVERY = 4;
+    /** Ticks between two raid lookups. */
+    private static final int RAID_CHECK_INTERVAL = 40;
+    /** How far a ringing bell is heard, in blocks: vanilla's, for villagers. */
+    public static final double HEAR_BELL_RADIUS = 32.0;
+    /** Ticks a rung bell keeps a villager alarmed: vanilla's 15 seconds of hiding. */
+    public static final int ALARM_TICKS = 300;
+    /** Ticks a villager shakes its head for. */
+    private static final int UNHAPPY_TICKS = 40;
 
     /** The villager type worn when there is no other: the plains, as for a villager. */
     public static final String DEFAULT_VILLAGER_TYPE = "minecraft:plains";
@@ -69,10 +96,22 @@ public abstract class CivVillager extends SavingMob {
     /** Synced, so clients draw the right clothes. */
     private static final EntityDataAccessor<String> VILLAGER_TYPE =
             SynchedEntityData.defineId(CivVillager.class, EntityDataSerializers.STRING);
+    /** Ticks left of shaking its head; synced, so clients draw it. */
+    private static final EntityDataAccessor<Integer> UNHAPPY =
+            SynchedEntityData.defineId(CivVillager.class, EntityDataSerializers.INT);
 
     /** The tick count from which to look for a player again, and whether the last look found one. */
     private int presenceCheckTick;
     private boolean playerNear = true;
+
+    /** The tick count from which to look for a raid again, and what the last look found. */
+    private int raidCheckTick;
+    private BlockPos raidCenter;
+    private boolean raidWon;
+
+    /** The bell last heard ringing, and the game time it rang; never saved, an alarm is short. */
+    private BlockPos alarmBell;
+    private long alarmTime;
 
     protected CivVillager(EntityType<? extends CivVillager> type, Level level) {
         super(type, level);
@@ -93,6 +132,7 @@ public abstract class CivVillager extends SavingMob {
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
         builder.define(VILLAGER_TYPE, DEFAULT_VILLAGER_TYPE);
+        builder.define(UNHAPPY, 0);
     }
 
     // Goals.
@@ -100,7 +140,11 @@ public abstract class CivVillager extends SavingMob {
     @Override
     protected final void registerGoals() {
         goalSelector.addGoal(0, new FloatGoal(this));
+        goalSelector.addGoal(1, new CivPanicGoal(this));
+        goalSelector.addGoal(2, new CivHideGoal(this));
+        goalSelector.addGoal(3, new CivCelebrateGoal(this));
         goalSelector.addGoal(5, new OpenDoorGoal(this, true));
+        goalSelector.addGoal(6, new CivMeetGoal(this));
         // Looking around is for players to see, so it stops with nobody near.
         goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F) {
             @Override
@@ -135,7 +179,11 @@ public abstract class CivVillager extends SavingMob {
      */
     @Override
     public void aiStep() {
-        if (!level().isClientSide() && resting() && (tickCount + getId()) % REST_EVERY != 0) return;
+        if (!level().isClientSide()) {
+            int unhappy = entityData.get(UNHAPPY);
+            if (unhappy > 0) entityData.set(UNHAPPY, unhappy - 1);
+            if (resting() && (tickCount + getId()) % REST_EVERY != 0) return;
+        }
         super.aiStep();
     }
 
@@ -165,6 +213,79 @@ public abstract class CivVillager extends SavingMob {
     /** Whether a living player who is not spectating is within {@code range} of the point. */
     public static boolean anyPlayerWithin(Level level, double x, double y, double z, double range) {
         return level.hasNearbyAlivePlayer(x, y, z, range);
+    }
+
+    // Fighting or not.
+
+    /**
+     * Whether this villager fights. One that does not is a civilian, and flees and hides as a villager
+     * does. False here; a guard is a combatant while it holds a weapon.
+     */
+    public boolean isCombatant() {
+        return false;
+    }
+
+    // Raids and the bell.
+
+    /**
+     * The center of the raid being fought where the villager stands, or null. Looked up at most once every
+     * {@link #RAID_CHECK_INTERVAL} ticks, with {@link #raidWon()}.
+     */
+    public BlockPos raidCenter() {
+        refreshRaid();
+        return raidCenter;
+    }
+
+    /** Whether a raid where the villager stands has just been won, and the village is celebrating. */
+    public boolean raidWon() {
+        refreshRaid();
+        return raidWon;
+    }
+
+    private void refreshRaid() {
+        if (tickCount < raidCheckTick) return;
+        raidCheckTick = tickCount + RAID_CHECK_INTERVAL;
+        ServerLevel level = serverLevel();
+        Raid raid = level == null ? null : level.getRaidAt(blockPosition());
+        raidCenter = raid != null && raid.isActive() && !raid.isOver() ? raid.getCenter() : null;
+        raidWon = raid != null && raid.isVictory();
+    }
+
+    /** Hears the bell at {@code bell} ring at {@code gameTime}: alarmed for {@link #ALARM_TICKS}. */
+    public void hearBell(BlockPos bell, long gameTime) {
+        alarmBell = bell.immutable();
+        alarmTime = gameTime;
+    }
+
+    /** The bell that rang within the last {@link #ALARM_TICKS}, or null. */
+    public BlockPos alarmBell() {
+        ServerLevel level = serverLevel();
+        if (alarmBell != null && (level == null || level.getGameTime() - alarmTime > ALARM_TICKS)) alarmBell = null;
+        return alarmBell;
+    }
+
+    /** A bell rang at {@code bell}: every villager of the mod within {@link #HEAR_BELL_RADIUS} hears it, as villagers do. */
+    public static void bellRang(ServerLevel level, BlockPos bell) {
+        List<CivVillager> near = level.getEntitiesOfClass(CivVillager.class, new AABB(bell).inflate(HEAR_BELL_RADIUS));
+        for (int i = 0; i < near.size(); i++) {
+            CivVillager villager = near.get(i);
+            if (villager.isAlive() && bell.closerToCenterThan(villager.position(), HEAR_BELL_RADIUS)) {
+                villager.hearBell(bell, level.getGameTime());
+            }
+        }
+    }
+
+    // Shaking its head.
+
+    /** Shakes its head and says no, as a villager with nothing to trade does. */
+    public void refuse() {
+        entityData.set(UNHAPPY, UNHAPPY_TICKS);
+        playSound(SoundEvents.VILLAGER_NO, 1.0F, getVoicePitch());
+    }
+
+    /** Whether it is shaking its head, on either side. */
+    public boolean isUnhappy() {
+        return entityData.get(UNHAPPY) > 0;
     }
 
     // Villager type.

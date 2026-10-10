@@ -70,6 +70,7 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
     public void extractRenderState(T villager, State state, float partialTick) {
         super.extractRenderState(villager, state, partialTick);
         state.clothes = CivVillagerModelLayers.clothes(villager.villagerType());
+        state.unhappy = villager.isUnhappy();
     }
 
     @Override
@@ -87,9 +88,10 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
         return new ModelLayerLocation(Civillagers.id("villager"), slot);
     }
 
-    /** What a villager's model is drawn from: a humanoid's, and the clothes it wears. */
+    /** What a villager's model is drawn from: a humanoid's, the clothes it wears, and whether it is saying no. */
     public static class State extends net.minecraft.client.renderer.entity.state.HumanoidRenderState {
         public Identifier clothes = CivVillagerModelLayers.clothes(CivVillager.DEFAULT_VILLAGER_TYPE);
+        public boolean unhappy;
     }
 
     /** The clothes of the villager's type, drawn over the body on the same model, as a villager's are. */

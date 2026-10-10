@@ -214,6 +214,8 @@ public final class GuardGameTest {
     public void aGuardLooksForTargetsAtMostEveryTenTicks(GameTestHelper helper) {
         TestFixtures.floor(helper, 1);
         Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        // Armed: a guard with no weapon looks for nothing.
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
         GuardTargetGoal goal = new GuardTargetGoal(guard);
         // The test world has no player, so the guard idles and looks less often.
         int start = guard.tickCount;

@@ -9,8 +9,10 @@ and an addon's own. A role extends it and adds only what makes it that role.
 |---|---|
 | Look and voice | Villager sounds, a villager's 20 health (`createVillagerAttributes()`), opens doors, picks nothing up, never despawns |
 | Clothes | Its [villager type](villager-type.md), from the biome it spawns in; saved, synced, drawn by `CivVillagerRenderer` |
+| Villager life | Civilians flee and hide, an armed guard rallies, all meet at the bell, celebrate and shake their heads: [villager-life.md](villager-life.md). `isCombatant()` says which |
 | Idling | No player within 48 blocks: the look-around goals stop, and at rest (`resting()`) the AI and movement run one tick in four. A role reads `playerNear()` to idle its own goals |
-| Goals | Floating (0), doors (5), looking around (7, 8); the role's in `registerRoleGoals()`; then addons' through `CivVillagerEvents.REGISTER_GOALS` |
+| Goals | Floating (0), panic (1), hiding (2), celebrating (3), doors (5), meeting (6), looking around (7, 8); the role's in `registerRoleGoals()`; then addons' through `CivVillagerEvents.REGISTER_GOALS` |
+| Raids and the bell | `raidCenter()`, `raidWon()` (one lookup every 40 ticks), `alarmBell()` (a bell heard in the last 15 s) |
 | Saving | `saveExtra` / `loadExtra`, through [platform/SavingMob](../../src/main/java/com/civillagers/platform/SavingMob.java); a subclass calls `super` first |
 | Zombies | A type registered with `ZombieVillagers.register` turns and is cured back: see [zombie-guard.md](zombie-guard.md) |
 | Model and renderer | `CivVillagerModel` and `CivVillagerRenderer<T>`: a villager's head and robe on a humanoid with free arms, with clothes, held items and armor |
@@ -36,6 +38,7 @@ An addon does the same with its own loader's registration; see [addon-api.md](ad
 
 ## Related
 
+- [villager-life.md](villager-life.md): the villager behaviour it gives every role.
 - [guard.md](guard.md): the one role so far.
 - [addon-api.md](addon-api.md): extending it from another mod.
 - [decisions.md](decisions.md): why one base class.

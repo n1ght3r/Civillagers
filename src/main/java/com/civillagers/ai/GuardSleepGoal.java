@@ -3,20 +3,12 @@ package com.civillagers.ai;
 import com.civillagers.entity.Guard;
 import com.civillagers.platform.Vanilla;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
-import net.minecraft.world.entity.ai.village.poi.PoiManager;
-import net.minecraft.world.entity.ai.village.poi.PoiRecord;
-import net.minecraft.world.entity.ai.village.poi.PoiType;
-import net.minecraft.world.entity.ai.village.poi.PoiTypes;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.EnumSet;
-import java.util.Iterator;
-import java.util.function.Predicate;
 
 /**
  * Sends a guard to bed at night and wakes it at dawn. The bed is the nearest free one: no villager has
@@ -39,8 +31,6 @@ public final class GuardSleepGoal extends Goal {
     /** Ticks a guard keeps walking to a bed it cannot reach before giving up on it for the night. */
     private static final int GIVE_UP = 400;
     private static final int REPATH = 40;
-
-    private static final Predicate<Holder<PoiType>> BED = holder -> holder.is(PoiTypes.HOME);
 
     private final Guard guard;
     private BlockPos bed;
@@ -111,27 +101,9 @@ public final class GuardSleepGoal extends Goal {
 
     /**
      * The nearest bed within {@code radius} of {@code origin} that no villager has claimed and nobody lies
-     * in, or null. Reads only loaded chunks: {@link PoiManager} would read an unloaded one from disk.
+     * in, or null. See {@link Homes#nearestBed}.
      */
     public static BlockPos findBed(ServerLevel level, BlockPos origin, int radius) {
-        PoiManager poi = level.getPoiManager();
-        BlockPos nearest = null;
-        double nearestDistance = Double.MAX_VALUE;
-        for (int x = (origin.getX() - radius) >> 4; x <= (origin.getX() + radius) >> 4; x++) {
-            for (int z = (origin.getZ() - radius) >> 4; z <= (origin.getZ() + radius) >> 4; z++) {
-                if (!level.hasChunk(x, z)) continue;
-                Iterator<PoiRecord> beds = poi.getInChunk(BED, new ChunkPos(x, z), PoiManager.Occupancy.HAS_SPACE).iterator();
-                while (beds.hasNext()) {
-                    BlockPos pos = beds.next().getPos();
-                    double distance = pos.distSqr(origin);
-                    if (distance >= nearestDistance || distance > (double) radius * radius) continue;
-                    BlockState state = level.getBlockState(pos);
-                    if (!(state.getBlock() instanceof BedBlock) || state.getValue(BedBlock.OCCUPIED)) continue;
-                    nearest = pos;
-                    nearestDistance = distance;
-                }
-            }
-        }
-        return nearest;
+        return Homes.nearestBed(level, origin, radius, true);
     }
 }

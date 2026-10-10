@@ -6,6 +6,7 @@ import com.civillagers.entity.CivVillager;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
@@ -13,6 +14,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
@@ -98,6 +100,19 @@ public final class CivVillagerModelLayers {
 
     private static Identifier clothesTexture(Identifier type) {
         return type.withPath("textures/entity/villager/type/" + type.getPath() + ".png");
+    }
+
+    /**
+     * Shakes {@code head} from side to side, chin down, while {@code unhappy}, as vanilla's villager model
+     * does when a villager says no; otherwise leaves it upright.
+     */
+    public static void shakeHead(ModelPart head, boolean unhappy, float ageInTicks) {
+        if (unhappy) {
+            head.zRot = 0.3F * Mth.sin(0.45F * ageInTicks);
+            head.xRot = 0.4F;
+        } else {
+            head.zRot = 0.0F;
+        }
     }
 
     /**

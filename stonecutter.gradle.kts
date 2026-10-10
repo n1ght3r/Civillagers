@@ -41,6 +41,8 @@ stonecutter parameters {
             // into animal.golem, arrows into projectile.arrow.
             replace("import net.minecraft.world.entity.npc.villager.Villager;",
                     "import net.minecraft.world.entity.npc.Villager;")
+            replace("import net.minecraft.world.entity.npc.villager.AbstractVillager;",
+                    "import net.minecraft.world.entity.npc.AbstractVillager;")
             replace("import net.minecraft.world.entity.projectile.arrow.AbstractArrow;",
                     "import net.minecraft.world.entity.projectile.AbstractArrow;")
             replace("import net.minecraft.world.entity.animal.golem.IronGolem;",

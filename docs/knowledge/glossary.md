@@ -7,6 +7,9 @@ it here, and say why in [decisions.md](decisions.md) if it was a choice.
 |---|---|---|---|
 | villager of the mod, `CivVillager` | The base every role extends: guard, later chief and builder | | [civ-villager.md](civ-villager.md) |
 | role | What a `CivVillager` does: its goals and state on top of the base | | [civ-villager.md](civ-villager.md) |
+| combatant, civilian | A villager of the mod that fights (a guard with a weapon), or one that flees and hides | | [villager-life.md](villager-life.md) |
+| alarm | A bell heard ringing within the last 15 s | | [villager-life.md](villager-life.md) |
+| meeting hours | 9000 to 11000 ticks of the day, when villagers gather at the bell | | [villager-life.md](villager-life.md) |
 | guard | The mod's villager who fights | Villager Guard / Lính gác | [guard.md](guard.md) |
 | zombie guard | A zombie villager that was a guard, tagged `civillagers.zombie_of.civillagers.guard` | (a Zombie Villager) | [zombie-guard.md](zombie-guard.md) |
 | addon API, hook, listener | `com.civillagers.api`: what other mods use; a hook is one `Listeners` list | | [addon-api.md](addon-api.md) |

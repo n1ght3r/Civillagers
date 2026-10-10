@@ -7,8 +7,9 @@ import net.minecraft.client.model.geom.ModelPart;
 /**
  * The model of every villager of the mod: {@link CivVillagerModelLayers#createBodyLayer()} on a
  * {@link HumanoidModel}, so the arms swing and take a player's poses. The robe is hidden while the
- * villager wears leggings, which would poke through it. Not final: an addon's villager with a part of its
- * own extends it.
+ * villager wears leggings, which would poke through it, and the head shakes while it says no
+ * ({@link CivVillagerModelLayers#shakeHead}), as a villager's does. Not final: an addon's villager with a
+ * part of its own extends it.
  *
  * <p>One class per side of 1.21.2's render states; see {@link ClientVanilla}. Before them the model is
  * typed by the entity it draws.
@@ -26,6 +27,7 @@ public class CivVillagerModel extends HumanoidModel<CivVillagerRenderer.State> {
     public void setupAnim(CivVillagerRenderer.State state) {
         super.setupAnim(state);
         jacket.visible = state.legsEquipment.isEmpty();
+        CivVillagerModelLayers.shakeHead(head, state.unhappy, state.ageInTicks);
     }
 }
 //?} else {
@@ -49,6 +51,9 @@ public class CivVillagerModel extends HumanoidModel<CivVillagerRenderer.State> {
                           float netHeadYaw, float headPitch) {
         super.setupAnim(villager, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
         jacket.visible = villager.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.LEGS).isEmpty();
+        CivVillagerModelLayers.shakeHead(head, villager.isUnhappy(), ageInTicks);
+        // The hat sits beside the head here, not on it, so it follows the shake by hand.
+        hat.copyFrom(head);
     }
 }
 *///?}
