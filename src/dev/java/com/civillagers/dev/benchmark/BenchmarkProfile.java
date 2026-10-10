@@ -21,13 +21,13 @@ record BenchmarkProfile(String name, int[] villageCounts, int villageWarmup, int
     static final int MAX_VILLAGES = BenchmarkWorld.VILLAGE_GRID * BenchmarkWorld.VILLAGE_GRID;
 
     static final BenchmarkProfile QUICK = new BenchmarkProfile("quick",
-            new int[] {1, 10, 50}, 200, 1_000, new int[] {1, 20}, 60, 200);
+            new int[] {1, 10, 50}, 200, 1_000, new int[] {1, 20}, 100, 300);
     static final BenchmarkProfile STANDARD = new BenchmarkProfile("standard",
             new int[] {1, 10, 50, 100}, 400, 2_000, new int[] {1, 10, 20, 50}, 100, 400);
 
     String describe() {
         return "villages " + Arrays.toString(villageCounts) + " x " + villageTicks + " simulated ticks, guards "
-                + Arrays.toString(guardCounts) + " x " + guardTicks + " server ticks (patrol and combat)";
+                + Arrays.toString(guardCounts) + " x " + guardTicks + " server ticks (patrol, combat, nobody near)";
     }
 
     JsonObject toJson() {

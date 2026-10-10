@@ -33,11 +33,13 @@ Worldgen differs between Minecraft versions, so the same seed still gives differ
 
 | Profile | Villages | Simulated ticks | Guards | Server ticks |
 |---|---|---|---|---|
-| `quick` (default) | 1, 10, 50 | 200 + 1 000 | 1, 20 | 60 + 200 |
+| `quick` (default) | 1, 10, 50 | 200 + 1 000 | 1, 20 | 100 + 300 |
 | `standard` | 1, 10, 50, 100 | 400 + 2 000 | 1, 10, 20, 50 | 100 + 400 |
 
-`quick` takes about a minute and a half on a desktop, most of it the guard scenarios, which run in real
-time; `standard` about five minutes.
+`quick` takes about two and a half minutes on a desktop, most of it the guard scenarios, which run in
+real time; `standard` about five minutes. A guard scenario warms up for 100 ticks and measures at least
+300: every patrolling guard starts its first walk within eight seconds of spawning, and a shorter window
+measures that burst rather than a patrol.
 
 ## Running it by hand
 
@@ -83,15 +85,25 @@ bytes either way is noise.
 ### Mobs
 
 Real server ticks, around a bell in the middle of the area, at noon: guards on patrol, guards in combat
-(zombies from the edge every five seconds, up to as many as there are guards), and at the guard budget's
-count, 20 vanilla villagers and 20 vanilla iron golems in the same spot. Every kind is timed from the
+(zombies from the edge every five seconds, up to as many as there are guards), guards with nobody near,
+and at the guard budget's count, 20 vanilla villagers and 20 vanilla iron golems in the same spot.
+
+Nobody joins a benchmark, and a guard with no player within 48 blocks idles: no patrol, no looking around,
+fewer scans, and while it stands still it thinks one tick in four. So the patrol and combat scenarios
+tell every guard a player is near, through `PlayerPresence` and the dev mod's `GuardMixin`, and measure a
+guard someone watches; "guards, nobody near" tells them no, and measures the idle guard. Every kind is timed from the
 outside, around each entity's whole tick, by `ServerLevelMixin` and `EntityTickTimer`: its AI, its
 pathfinding, and the movement and collision vanilla does for any mob. That is stricter than timing the
 mod's own goals, and it is what lets a guard be set beside a vanilla mob. Guards are also timed from the
 inside by `GuardStats`; the two agree.
 
-`scansPerGuardPer10Ticks` counts the guard's target scans: the budget is at most one per ten ticks. A
-scenario in which some mob did not tick on some tick fails rather than look cheap.
+`scansPerGuardPer10Ticks` counts the guard's target scans: the budget is at most one per ten ticks, for
+a guard someone watches. A scenario in which some mob did not tick on some tick fails rather than look
+cheap.
+
+The patrol and combat budgets are ratios: 20 guards against the 20 iron golems of the same run, so a slower
+or busier machine moves both sides together and the verdict does not depend on it. The idle budget is in
+milliseconds, since it is the one that has to stay small whatever a golem costs.
 
 With one guard the per-guard figure is high: that guard's code is still being compiled by the JIT. Read
 per-guard cost off the 20 and 50 guard rows.
@@ -103,7 +115,7 @@ per-guard cost off the 20 and 50 guard rows.
 - A real village around the guards: beds, workstations and villagers are absent, so guards never sleep
   and villages never count members during the mob scenarios.
 - The leak check of section 1.4 (open and close a singleplayer world, then a class histogram), which needs
-  a client; do it by hand with `jcmd <pid> GC.class_histogram`.
+  a client: `tools/agent/smoke/leak.jsonl` runs it.
 
 ## What it does to the world
 

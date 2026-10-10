@@ -37,7 +37,11 @@ final class BenchmarkRun {
     private static final double BUDGET_VILLAGES_MS = 0.1;
     private static final double BUDGET_UNLOADED_MS = 0.01;
     private static final int BUDGET_GUARDS = 20;
-    private static final double BUDGET_GUARDS_MS = 0.15;
+    /** Guards on patrol over iron golems in the same spot, both measured in this run. */
+    private static final double BUDGET_PATROL_PER_GOLEM = 1.0;
+    /** Guards in combat over iron golems in the same spot. */
+    private static final double BUDGET_COMBAT_PER_GOLEM = 2.0;
+    private static final double BUDGET_IDLE_GUARDS_MS = 0.15;
     private static final double BUDGET_SCANS_PER_10_TICKS = 1.0;
     private static final double BUDGET_VILLAGE_BYTES = 4096;
 
@@ -89,8 +93,10 @@ final class BenchmarkRun {
         unloaded = new VillageScenario(world, BUDGET_VILLAGES, profile.villageWarmup(), profile.villageTicks(), true);
         stages.add(unloaded);
         stages.add(memory);
-        List<MobScenario.Kind> kinds = new ArrayList<>(List.of(MobScenario.Kind.GUARDS_PATROL, MobScenario.Kind.GUARDS_COMBAT));
+        List<MobScenario.Kind> guardKinds = List.of(MobScenario.Kind.GUARDS_PATROL, MobScenario.Kind.GUARDS_COMBAT,
+                MobScenario.Kind.GUARDS_IDLE);
         for (int count : profile.guardCounts()) {
+            List<MobScenario.Kind> kinds = new ArrayList<>(guardKinds);
             // The vanilla mobs a guard is compared with, at the count the guard budget is for.
             if (count == BUDGET_GUARDS) kinds.addAll(List.of(MobScenario.Kind.VILLAGERS, MobScenario.Kind.IRON_GOLEMS));
             for (MobScenario.Kind kind : kinds) {
@@ -99,7 +105,6 @@ final class BenchmarkRun {
                 stages.add(scenario);
                 stages.add(Stage.idle("settle", GUARD_SETTLE_TICKS));
             }
-            kinds.retainAll(List.of(MobScenario.Kind.GUARDS_PATROL, MobScenario.Kind.GUARDS_COMBAT));
         }
         totalStages = stages.size();
     }
@@ -164,6 +169,7 @@ final class BenchmarkRun {
 
     private void finish(String status, String message, Throwable error) {
         finished = true;
+        PlayerPresence.force(null);
         if (error != null) BenchmarkRunner.LOGGER.error("[CivBenchmark] the run failed", error);
         try {
             world.close();
@@ -196,6 +202,8 @@ final class BenchmarkRun {
         settings.addProperty("schedulerBudgetMs", VillageScheduler.budgetNanos() / 1_000_000.0);
         settings.addProperty("schedulerMaxPerTick", VillageScheduler.maxPerTick());
         settings.addProperty("guardPathsPerTick", com.civillagers.ai.GuardPathBudget.PER_TICK);
+        settings.addProperty("guardCombatPathsPerTick", com.civillagers.ai.GuardPathBudget.COMBAT_PER_TICK);
+        settings.addProperty("guardActiveRange", com.civillagers.entity.Guard.ACTIVE_RANGE);
         json.add("settings", settings);
 
         JsonArray villages = new JsonArray();
@@ -233,17 +241,38 @@ final class BenchmarkRun {
         double worstScans = -1;
         for (MobScenario scenario : mobScenarios) {
             JsonObject result = scenario.result();
-            if (result == null || !scenario.kind().guards()) continue;
+            // Scans with nobody near are rarer by design; the budget is for a guard someone watches.
+            if (result == null || !scenario.kind().guards() || scenario.kind() == MobScenario.Kind.GUARDS_IDLE) continue;
             worstScans = Math.max(worstScans, result.get("scansPerGuardPer10Ticks").getAsDouble());
-            if (result.get("mobs").getAsInt() != BUDGET_GUARDS) continue;
-            String what = result.get("combat").getAsBoolean() ? "in combat" : "on patrol";
-            budgets.add(budget("phase 2: 20 guards " + what + ", mean ms/tick",
-                    result.getAsJsonObject("msPerTick").get("mean").getAsDouble(), BUDGET_GUARDS_MS));
+        }
+        // Guards against iron golems measured in the same run, so the budget does not depend on the machine.
+        double golems = meanAtBudgetCount(MobScenario.Kind.IRON_GOLEMS);
+        double patrol = meanAtBudgetCount(MobScenario.Kind.GUARDS_PATROL);
+        double combat = meanAtBudgetCount(MobScenario.Kind.GUARDS_COMBAT);
+        double idle = meanAtBudgetCount(MobScenario.Kind.GUARDS_IDLE);
+        if (golems > 0 && patrol >= 0) {
+            budgets.add(budget("phase 2: 20 guards on patrol / 20 iron golems, mean ms/tick", patrol / golems, BUDGET_PATROL_PER_GOLEM));
+        }
+        if (golems > 0 && combat >= 0) {
+            budgets.add(budget("phase 2: 20 guards in combat / 20 iron golems, mean ms/tick", combat / golems, BUDGET_COMBAT_PER_GOLEM));
+        }
+        if (idle >= 0) {
+            budgets.add(budget("phase 2: 20 guards with nobody near, mean ms/tick", idle, BUDGET_IDLE_GUARDS_MS));
         }
         if (worstScans >= 0) {
             budgets.add(budget("phase 2: target scans per guard per 10 ticks, worst scenario", worstScans, BUDGET_SCANS_PER_10_TICKS));
         }
         return budgets;
+    }
+
+    /** The mean ms/tick of {@code kind} at the budget's count of mobs, or -1 if this run has none. */
+    private double meanAtBudgetCount(MobScenario.Kind kind) {
+        for (MobScenario scenario : mobScenarios) {
+            JsonObject result = scenario.result();
+            if (result == null || scenario.kind() != kind || result.get("mobs").getAsInt() != BUDGET_GUARDS) continue;
+            return result.getAsJsonObject("msPerTick").get("mean").getAsDouble();
+        }
+        return -1;
     }
 
     private static JsonObject budget(String name, double value, double limit) {
