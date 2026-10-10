@@ -52,7 +52,7 @@ whatever is retained piles up with each one.
 
 | Tool | For |
 |---|---|
-| `runBenchmark` (ported from ThirstWasTaken2) | The mspt (milliseconds per tick) the mod costs with 1 / 10 / 50 villages, on a fixed seed |
+| `runBenchmark` (ported from ThirstWasTaken2) | What the mod costs on a fixed seed: village ticks with 1 / 10 / 50 / 100 villages, one village's memory, guards on patrol and in combat beside vanilla villagers and iron golems; each budget below marked met or missed. See `src/dev/java/com/civillagers/dev/benchmark/AGENTS.md` |
 | JFR (`-Pprofile`) | Hot methods and allocation sites |
 | Leak check | Open and close a singleplayer world 5 times, then `jcmd <pid> GC.class_histogram`: the `ServerLevel` and mod class instance counts must be 0 |
 | Gametests | Every lifecycle rule has a test: create villages, stop the server, check every cache is empty |
@@ -71,13 +71,19 @@ whatever is retained piles up with each one.
 
 ## 2. Phases
 
+Each phase is cut into steps small enough for one change each. A step is done when its own check passes
+(a gametest, a benchmark figure, an agent script); a phase is done when every step is, and its budget is
+met in `runBenchmark`. ✅ done, 🚧 in progress, ⬜ not started.
+
 ### Phase 0 — Foundation ✅
 - Multi-version layout (Fabric 26.3, 26.2, 1.21.1, NeoForge 1.21.1), CI, gametests, automatic dependency bumps.
 
-### Phase 1 — Village core and measurement 🚧
+### Phase 1 — Village core and measurement ✅ (leak check by hand still to do)
 *Nothing a player sees, but everything after builds on it.*
-Status: everything below is in except `runBenchmark`, which is postponed until later phases exist. The
-gametests pass on every node; the benchmark budget and the leak check are not measured yet.
+Status: everything below is in. On every node, 50 empty villages cost 0.007–0.026 ms/tick and 50 villages
+in unloaded chunks 0.0003 ms/tick (`runBenchmark`, 2026-10-10). One typical village keeps about
+3.4–3.8 KB, after member UUIDs were packed into `long` arrays and stockpile ids shared. The leak check
+needs a client and has not been run.
 - `VillageData` (`SavedData` per dimension): id, center, radius, villager UUIDs, level, stockpile (counts, not items).
 - Village detection from vanilla POIs (bell, beds, workstations); merging and splitting villages.
 - `VillageIndex`: the chunk → village index.
@@ -86,50 +92,95 @@ gametests pass on every node; the benchmark budget and the leak check are not me
 - Port `runBenchmark` and `/civillagers debug stats` from ThirstWasTaken2.
 - **Done when:** gametests for creating, saving, reloading and merging villages pass; the benchmark with 50 empty villages is ≤ 0.1 ms/tick; the leak check passes.
 
-### Phase 2 — Guards
-- A `Guard` entity of its own (not a villager profession: vanilla professions only change trades).
-- `GoalSelector` (cheap, easy to control) rather than a full `Brain`.
-- Patrol the village, attack hostile mobs, defend during raids, return to bed at night.
-- Weapons and armor; players can hand them gear.
-- Model and renderer (Blockbench), `en_us` and `vi_vn` lang.
-- **Look (requested):** the guard looks like a villager (villager head with the big nose, villager
-  robe) but its arms are two separate arms like a player's, not the villager's crossed arms. It shows
-  the weapon or shield it holds and the armor it wears, the way a player does.
-  - Model: built on `HumanoidModel` with a villager-sized head (8×10×8) and the robe; the arms swing
-    when walking and take the usual poses (attack, bow, crossbow, shield).
-  - Layers: `ItemInHandLayer` for weapons and shields, `HumanoidArmorLayer` for armor. The helmet is
-    scaled or raised to fit the taller villager head; the robe is shortened or hidden where leggings
-    would clip through it.
-  - Texture: first version reuses vanilla's villager texture by path (never copied into the jar); the
-    villager texture already has the arm UVs, split here into two arms. A guard skin of its own (64×64)
-    can come later, made or licensed for the mod.
-  - The renderer differs between 1.21.1, 1.21.2+ (render states) and 26.x, so the differences go behind
-    `client/platform/ClientVanilla`.
-- **Done when:** 20 guards cost ≤ 0.15 ms/tick; each guard scans for targets at most once every 10 ticks; combat and patrol gametests pass.
+### Phase 2 — Guards 🚧
+A `Guard` entity of its own (vanilla professions only change trades), on a `GoalSelector` (cheap, easy to
+control) rather than a `Brain`.
 
-### Phase 3 — Village chief
-- One chief per village, chosen from its villagers, with succession when the chief dies.
-- A slow decision loop (~5 seconds, staggered) driven by **needs**: housing, defense, food, expansion.
-- The output is a **plan** written to `VillageData`, such as "needs 1 more house" or "needs 2 more guards".
-- A village info GUI; synced only while it is open.
-- **Done when:** a chief's decision costs ≤ 0.05 ms per village per run; succession and needs gametests pass.
+**Look (requested):** a villager (villager head with the big nose, villager robe) with two separate arms
+like a player's, showing the weapon or shield it holds and the armor it wears. Built on `HumanoidModel`
+with an 8×10×8 head and the robe; `ItemInHandLayer` and `HumanoidArmorLayer`; the helmet stretched over
+the taller head; the robe hidden under leggings; vanilla's villager texture read by path (never copied).
+A guard skin of its own (64×64) can come later, made or licensed for the mod.
 
-### Phase 4 — Builders
-- A library of `.nbt` structures in `data/civillagers/structure/` (houses, walls, watchtowers, farms), extensible by datapack.
-- Site selection from heightmaps on a coarse grid, spread over several ticks.
-- Incremental placement: at most *K* blocks per tick per builder plus a global cap, only in loaded chunks, with a progress cursor so building resumes after a reload.
-- (Optional) Building costs resources from the village stockpile.
-- **Done when:** 3 builders at once cost ≤ 0.2 ms/tick; quitting mid-build and coming back resumes at the right block; no chunk is ever force-loaded.
+| Step | What | Check | |
+|---|---|---|---|
+| 2.1 | Entity, attributes, spawn egg, `en_us`/`vi_vn` | `aNewGuardCarriesASword` | ✅ |
+| 2.2 | Model and renderer on 1.21.1 and 26.x (`client/platform/GuardModel`, `GuardRenderer`) | `tools/agent/shots/guards.jsonl` on every client node | ✅ |
+| 2.3 | Gear: hand over by using an item, take back sneaking | `aGuardWearsWhatItIsGiven`, `aPlayerHandsAGuardASword` | ✅ |
+| 2.4 | Rate-limited target scan; melee and bow | `aGuardLooksForTargetsAtMostEveryTenTicks`, `aGuardGoesAfterAHostileMob` | ✅ |
+| 2.5 | Patrol inside the village, per-tick path budget | `patrolPointsStayInTheVillage` | ✅ |
+| 2.6 | Sleep in a free bed at night; head for a raid | `aGuardFindsAFreeBed` | ✅ |
+| 2.7 | Guards counted per village (`Village.guards`) | `savesAndReloadsEveryField` | ✅ |
+| 2.8 | Decide the guard budget (see below) | this table | ⬜ |
+| 2.9 | Lighter AI with no player near: no patrol, no idle look, a slower scan, beyond 48 blocks of every player | benchmark scenario "guards, nobody near" | ⬜ |
+| 2.10 | Combat path budget: recompute only when the target moved more than 2 blocks, capped per tick | benchmark "guards in combat" | ⬜ |
+| 2.11 | Raise the shield against a ranged attacker or a creeper about to blow | gametest | ⬜ |
+| 2.12 | Accept crossbows (charge, shoot, crossbow pose) | gametest + agent shot | ⬜ |
+| 2.13 | Zombies and raiders single guards out as targets | gametest | ⬜ |
+| 2.14 | Leak check: open and close a world 5 times, `jcmd <pid> GC.class_histogram` shows no `Guard` | manual | ⬜ |
 
-### Phase 5 — Village growth
-- Village levels and eras: wood → stone → brick → walls.
-- The chief unlocks new structures by level; population grows with housing.
-- **Done when:** the benchmark with 10 max-level villages stays within the budgets in 1.4.
+**Budget.** The first target was "20 guards ≤ 0.15 ms/tick". Measured around each guard's whole tick
+(its AI, its pathfinding, and the movement and collision vanilla does for any mob), on every node
+(2026-10-10): 20 guards cost 0.40–0.56 ms/tick on patrol and 0.75–1.12 ms in combat, about 20–28 µs per
+patrolling guard; with the same clock, 20 vanilla iron golems cost 0.46–0.69 ms and 20 vanilla villagers
+1.2–2.2 ms. A patrolling guard costs about an iron golem and a third to a quarter of a villager; 0.15 ms
+for 20 is below what any vanilla mob costs under this measurement. Proposal for 2.8: **a patrolling guard
+costs no more than a vanilla iron golem in the same scenario, 20 guards stay ≤ 0.6 ms/tick on patrol and
+≤ 1.2 ms in combat, and 2.9 brings guards nobody is near to ≤ 0.15 ms for 20.** Target scans stay at most
+one per 10 ticks (measured 0.76).
 
-### Phase 6 — Polish and 1.0
-- Config screen (Mod Menu / NeoForge), with every performance limit configurable.
-- Documentation, Modrinth and CurseForge pages, release scripts (ported from ThirstWasTaken2).
-- Compatibility checks with popular villager mods (MCA, Guard Villagers) and performance mods (Lithium, ModernFix).
+**Done when:** 2.1–2.10 and 2.14 are done and their checks pass on every node; 2.11–2.13 may move to a
+later release.
+
+### Phase 3 — Village chief ⬜
+One chief per village, a slow decision loop driven by needs, and a plan in the village data that guards
+(and later builders) act on.
+
+| Step | What | Check |
+|---|---|---|
+| 3.1 | Pick a chief from the members (oldest, or a villager with a bell nearby); store its UUID in `Village` | gametest: a village with members has a chief after one update |
+| 3.2 | Succession: a dead or missing chief is replaced on the next slow update | gametest |
+| 3.3 | Needs, computed from what the village already counts: housing (beds vs members), defense (guards vs members and raids seen), food | pure unit gametests on fixed counts |
+| 3.4 | The plan: a short, capped list in `Village` ("1 more house", "2 more guards"), saved with the codec | save/reload gametest |
+| 3.5 | Decisions on `VillageScheduler`'s staggered interval, never per tick | benchmark: ≤ 0.05 ms per village per run |
+| 3.6 | Recruitment: "needs a guard" turns an unemployed villager into a guard, slowly and capped (open question 4) | gametest |
+| 3.7 | `/civillagers debug here` shows the chief, needs and plan; `server.villages` answers them | agent script |
+| 3.8 | Village info screen, synced only while open, rate-limited | agent script + manual |
+
+**Done when:** 3.1–3.7 pass and 3.5's budget is met; 3.8 can follow.
+
+### Phase 4 — Builders ⬜
+
+| Step | What | Check |
+|---|---|---|
+| 4.1 | Structure library: `.nbt` in `data/civillagers/structure/` (a house first), loaded through `StructureTemplateManager`, datapack-extensible | gametest loads every template |
+| 4.2 | Site selection from heightmaps on a coarse grid, spread over several ticks, only in loaded chunks | gametest: a site is flat enough and inside the village |
+| 4.3 | Build cursor `(template, index)` in `Village`, saved | save/reload gametest resumes at the right block |
+| 4.4 | Placement: at most K blocks per tick per builder and a global cap, skipping unloaded chunks | benchmark: 3 builders ≤ 0.2 ms/tick |
+| 4.5 | A builder entity (or profession) that walks to the site and places what the cursor says | gametest + agent shot |
+| 4.6 | The chief's plan starts builds; a finished build updates the counts | gametest |
+| 4.7 | (Open question 2) Building costs stockpile resources | gametest |
+
+**Done when:** 4.1–4.6 pass, 4.4's budget is met, and no chunk is ever force-loaded.
+
+### Phase 5 — Village growth ⬜
+
+| Step | What | Check |
+|---|---|---|
+| 5.1 | Village levels from population and buildings, saved | gametest |
+| 5.2 | Eras (wood → stone → brick → walls) choose the structure set | gametest |
+| 5.3 | Population grows with housing (breeding helped or allowed by free beds) | gametest |
+| 5.4 | Walls and watchtowers; guards post on towers | agent shot |
+| 5.5 | Benchmark scenario: 10 max-level villages | within every budget in 1.4 |
+
+### Phase 6 — Polish and 1.0 ⬜
+
+| Step | What |
+|---|---|
+| 6.1 | Config (file, then Mod Menu / NeoForge screen) with every performance limit configurable |
+| 6.2 | Compatibility: MCA, Guard Villagers, Lithium, ModernFix |
+| 6.3 | Documentation, Modrinth and CurseForge pages, release scripts (ported from ThirstWasTaken2) |
+| 6.4 | A guard skin of its own |
 
 ### After 1.0 (ideas)
 - Relations between villages: trade, alliances, war.
@@ -138,9 +189,9 @@ gametests pass on every node; the benchmark budget and the leak check are not me
 
 ---
 
-## 3. Open questions before phases 2–4
+## 3. Open questions before phases 3–4
 
-1. Are guards **their own entity** (proposed) or **villagers with a new profession**?
+1. ~~Are guards their own entity or villagers with a new profession?~~ Their own entity (phase 2).
 2. Do builders **cost resources**, or build for free over time?
 3. Can players **give orders** to a village (through the chief), or are villages fully autonomous?
 4. Do generated villages start with guards and a chief, or do they have to earn them?
