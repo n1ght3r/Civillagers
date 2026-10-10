@@ -74,8 +74,10 @@ whatever is retained piles up with each one.
 ### Phase 0 — Foundation ✅
 - Multi-version layout (Fabric 26.3, 26.2, 1.21.1, NeoForge 1.21.1), CI, gametests, automatic dependency bumps.
 
-### Phase 1 — Village core and measurement
+### Phase 1 — Village core and measurement 🚧
 *Nothing a player sees, but everything after builds on it.*
+Status: everything below is in except `runBenchmark`, which is postponed until later phases exist. The
+gametests pass on every node; the benchmark budget and the leak check are not measured yet.
 - `VillageData` (`SavedData` per dimension): id, center, radius, villager UUIDs, level, stockpile (counts, not items).
 - Village detection from vanilla POIs (bell, beds, workstations); merging and splitting villages.
 - `VillageIndex`: the chunk → village index.
@@ -90,6 +92,19 @@ whatever is retained piles up with each one.
 - Patrol the village, attack hostile mobs, defend during raids, return to bed at night.
 - Weapons and armor; players can hand them gear.
 - Model and renderer (Blockbench), `en_us` and `vi_vn` lang.
+- **Look (requested):** the guard looks like a villager (villager head with the big nose, villager
+  robe) but its arms are two separate arms like a player's, not the villager's crossed arms. It shows
+  the weapon or shield it holds and the armor it wears, the way a player does.
+  - Model: built on `HumanoidModel` with a villager-sized head (8×10×8) and the robe; the arms swing
+    when walking and take the usual poses (attack, bow, crossbow, shield).
+  - Layers: `ItemInHandLayer` for weapons and shields, `HumanoidArmorLayer` for armor. The helmet is
+    scaled or raised to fit the taller villager head; the robe is shortened or hidden where leggings
+    would clip through it.
+  - Texture: first version reuses vanilla's villager texture by path (never copied into the jar); the
+    villager texture already has the arm UVs, split here into two arms. A guard skin of its own (64×64)
+    can come later, made or licensed for the mod.
+  - The renderer differs between 1.21.1, 1.21.2+ (render states) and 26.x, so the differences go behind
+    `client/platform/ClientVanilla`.
 - **Done when:** 20 guards cost ≤ 0.15 ms/tick; each guard scans for targets at most once every 10 ticks; combat and patrol gametests pass.
 
 ### Phase 3 — Village chief
