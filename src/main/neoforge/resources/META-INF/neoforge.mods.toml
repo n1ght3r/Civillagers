@@ -1,0 +1,39 @@
+# The NeoForge manifest, the counterpart of src/main/fabric/resources/fabric.mod.json. Templated: the
+# version, minecraft and neoforge placeholders are expanded by processResources in
+# build.neoforge.gradle.kts, which expands comments too, so none are written here. Keep the two
+# manifests saying the same thing.
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GPL-3.0-only"
+issueTrackerURL = "https://github.com/n1ght3r/Civillagers/issues"
+
+[[mods]]
+modId = "civillagers"
+version = "${version}"
+displayName = "Civillagers"
+description = '''Villages that grow into civilizations: guards, a village chief and builders who expand the village.'''
+authors = "Nighter"
+displayURL = "https://github.com/n1ght3r/Civillagers"
+
+# FML has no per-side mixin config: client-only mixins go in a config's own "client" list, which is how
+# civillagers.client.mixins.json keeps them off a dedicated server.
+[[mixins]]
+config = "civillagers.mixins.json"
+
+[[mixins]]
+config = "civillagers.client.mixins.json"
+
+# `ordering` and `side` are read with Enum.valueOf, so they must be upper case; `type` is not.
+[[dependencies.civillagers]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoforge},)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.civillagers]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft}"
+ordering = "NONE"
+side = "BOTH"

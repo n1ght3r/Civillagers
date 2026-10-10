@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "civillagers_gametest",
+  "version": "1.0.0",
+  "name": "Civillagers Game Tests",
+  "description": "Server-side gametests for Civillagers. Development only, never published.",
+  "environment": "server",
+  "entrypoints": {
+    "fabric-gametest": [
+      "com.civillagers.gametest.BootGameTest"
+    ]
+  },
+  "depends": {
+    "civillagers": "*",
+    "fabric-gametest-api-v1": "*"
+  }
+}

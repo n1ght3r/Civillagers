@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "civillagers-datagen",
+  "version": "1.0.0",
+  "name": "Civillagers Data Generation",
+  "description": "Writes the datapack and asset JSON Civillagers ships. Development only, never published.",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": [
+      "com.civillagers.datagen.CivillagersDatagen"
+    ]
+  },
+  "depends": {
+    "civillagers": "*",
+    "fabric-data-generation-api-v1": "*"
+  }
+}

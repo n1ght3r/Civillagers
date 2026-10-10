@@ -1,0 +1,120 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".claude/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/dependabot.yml"
+  pull_request:
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - ".claude/**"
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/dependabot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # A newer push to the same ref makes the running build obsolete.
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  discover:
+    name: Discover nodes
+    runs-on: ubuntu-latest
+    outputs:
+      nodes: ${{ steps.read.outputs.nodes }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Read nodes
+        id: read
+        # The matrix is derived from the loader tables in stonecutter.properties.toml rather than written
+        # out here, so a node added to settings.gradle.kts cannot go silently unbuilt.
+        run: |
+          set -euo pipefail
+          nodes=$(python3 tools/node_names.py matrix)
+          echo "$nodes" | jq -r '.[] | "\(.version) (\(.loader))"'
+          echo "nodes=$nodes" >> "$GITHUB_OUTPUT"
+
+  build-logic:
+    # Every node compiles build-logic, but none runs its tests, so they run once here.
+    name: Build logic tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Test
+        run: ./gradlew -p build-logic test --stacktrace
+
+  build:
+    name: Build ${{ matrix.version }}
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      # One job per node, so a break is attributed to the node that caused it.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.nodes) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # 26.1 and later need Java 25, 1.21.x Java 21. Both are installed so no job downloads a JDK.
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: |
+            21
+            25
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Register the JDKs as Gradle toolchains
+        # setup-java exports every JDK it installs as JAVA_HOME_<major>_X64 but does not tell Gradle.
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_21_X64,JAVA_HOME_25_X64" >> ~/.gradle/gradle.properties
+
+      # `ci` is defined in gradle/shared.gradle.kts: the jar, every check this node's loader has, and the
+      # gametests. The same task runs locally, so the list lives in one place.
+      - name: Build and check
+        run: ./gradlew ":${{ matrix.version }}:ci" --continue --stacktrace
+
+      - name: Upload game test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gametest-report-${{ matrix.version }}
+          path: versions/${{ matrix.version }}/build/gametest/report.xml
+          if-no-files-found: warn
+
+      - name: Upload mod JAR
+        uses: actions/upload-artifact@v7
+        with:
+          name: Civillagers-${{ matrix.version }}
+          path: |
+            build/libs/*.jar
+            !build/libs/*-sources.jar
+          if-no-files-found: error

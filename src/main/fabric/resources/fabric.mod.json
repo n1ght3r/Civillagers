@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "civillagers",
+  "version": "${version}",
+  "name": "Civillagers",
+  "description": "Villages that grow into civilizations: guards, a village chief and builders who expand the village.",
+  "authors": [
+    "Nighter"
+  ],
+  "contact": {
+    "homepage": "https://github.com/n1ght3r/Civillagers",
+    "sources": "https://github.com/n1ght3r/Civillagers",
+    "issues": "https://github.com/n1ght3r/Civillagers/issues"
+  },
+  "license": "GPL-3.0-only",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.civillagers.fabric.CivillagersFabric"],
+    "client": ["com.civillagers.client.fabric.CivillagersFabricClient"]
+  },
+  "mixins": [
+    "civillagers.mixins.json",
+    { "config": "civillagers.client.mixins.json", "environment": "client" }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader}",
+    "minecraft": "${minecraft}",
+    "java": ">=${java}",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

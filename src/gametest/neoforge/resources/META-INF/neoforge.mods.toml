@@ -1,0 +1,19 @@
+# The gametest mod on NeoForge, the counterpart of src/gametest/resources/fabric.mod.json. Development
+# only, never published. Its test classes are listed once, in that fabric.mod.json, which
+# CivillagersGameTests reads on this loader too.
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GPL-3.0-only"
+
+[[mods]]
+modId = "civillagers_gametest"
+version = "1.0.0"
+displayName = "Civillagers Game Tests"
+description = '''Server-side gametests for Civillagers. Development only, never published.'''
+
+[[dependencies.civillagers_gametest]]
+modId = "civillagers"
+type = "required"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "BOTH"

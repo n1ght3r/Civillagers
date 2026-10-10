@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Covers the plugins in settings.gradle.kts and the wrapper. The Minecraft-bound dependencies in
+  # stonecutter.properties.toml are updated by hand.
+  - package-ecosystem: "gradle"
+    directory: "/"
+    assignees:
+      - "n1ght3r"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    assignees:
+      - "n1ght3r"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"

@@ -1,0 +1,22 @@
+.gradle/
+build/
+# Kotlin's per-project data, which build-logic's `kotlin-dsl` writes.
+.kotlin/
+versions/
+run/
+out/
+
+# Datagen writes a hash cache next to its output; the output itself is committed.
+src/main/generated/*/.cache/
+*.iml
+.idea/
+.vscode/
+
+# Bytecode from running tools/ by hand.
+__pycache__/
+
+# Local agent workspace
+.claude/
+
+# Local environment variables
+.env
