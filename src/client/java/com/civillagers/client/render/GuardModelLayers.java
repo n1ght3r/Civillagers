@@ -17,6 +17,9 @@ import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * What the guard looks like, the same on every Minecraft version: a villager's head, nose, body and robe
  * on a humanoid's two separate arms, drawn with vanilla's own villager texture. The model and renderer
@@ -26,11 +29,22 @@ import net.minecraft.world.item.ItemStack;
  * (44, 22), 4x8x4, and the hands' bar at (40, 38). Each guard arm is that arm with half the bar below it
  * for a hand, twelve pixels long like a player's, so held items sit where they would in a player's hand.
  * The arms hang flush against the body, as a player's do; the robe, half a pixel wider, tucks under them.
+ *
+ * <p>That texture is a villager's bare body, in a grey shirt. Its clothes are a second texture drawn over
+ * it on the same model, one per villager type ({@link #clothes}), as vanilla draws a villager's.
  */
 public final class GuardModelLayers {
     public static final ModelLayerLocation BODY = new ModelLayerLocation(Civillagers.id("guard"), "main");
     /** Vanilla's villager texture, read by path from the game, never copied into the mod. */
     public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/villager/villager.png");
+    /** The clothes of vanilla's villager types, made once so that drawing a guard allocates nothing. Never changes. */
+    private static final Map<String, Identifier> VANILLA_CLOTHES = new HashMap<>();
+    static {
+        for (String type : new String[] { "desert", "jungle", "plains", "savanna", "snow", "swamp", "taiga" }) {
+            Identifier id = Identifier.withDefaultNamespace(type);
+            VANILLA_CLOTHES.put(id.toString(), clothesTexture(id));
+        }
+    }
     /** A helmet is drawn this much taller, to cover the villager's head: ten pixels where a player's is eight. */
     public static final float HELMET_STRETCH = 10.0F / 8.0F;
 
@@ -66,6 +80,22 @@ public final class GuardModelLayers {
         root.addOrReplaceChild("left_leg", CubeListBuilder.create().texOffs(0, 22).mirror()
                 .addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(2.0F, 12.0F, 0.0F));
         return LayerDefinition.create(mesh, 64, 64);
+    }
+
+    /**
+     * The clothes of the villager type {@code type}, such as {@code minecraft:snow}: the texture vanilla
+     * draws over a villager of that type, read by path from the game. Another mod's type gets its own
+     * texture by the same path, and anything that is not an id the plains' clothes.
+     */
+    public static Identifier clothes(String type) {
+        Identifier vanilla = VANILLA_CLOTHES.get(type);
+        if (vanilla != null) return vanilla;
+        Identifier id = Identifier.tryParse(type);
+        return id != null ? clothesTexture(id) : VANILLA_CLOTHES.get(Guard.DEFAULT_VILLAGER_TYPE);
+    }
+
+    private static Identifier clothesTexture(Identifier type) {
+        return type.withPath("textures/entity/villager/type/" + type.getPath() + ".png");
     }
 
     /**

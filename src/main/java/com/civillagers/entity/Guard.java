@@ -8,8 +8,14 @@ import com.civillagers.ai.GuardRaidGoal;
 import com.civillagers.ai.GuardShieldGoal;
 import com.civillagers.ai.GuardSleepGoal;
 import com.civillagers.ai.GuardTargetGoal;
+import com.civillagers.platform.SavingMob;
+import com.civillagers.platform.Vanilla;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -24,7 +30,6 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
-import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -67,10 +72,11 @@ import java.util.function.Predicate;
  * every {@link GuardTargetGoal#SCAN_INTERVAL} ticks, in a bounded box, and starts new paths within a
  * per-tick cap. With no player within {@link #ACTIVE_RANGE} it idles: it stops patrolling and looking
  * around, looks for targets less often, and while it stands still with nothing to do it thinks and moves
- * one tick in {@link #REST_EVERY}. Its tick is timed into {@link GuardStats}. It keeps nothing
- * of its own beyond what vanilla saves for every mob: its equipment, health and, while asleep, its bed.
+ * one tick in {@link #REST_EVERY}. Its tick is timed into {@link GuardStats}. Beyond what vanilla saves for
+ * every mob (its equipment, health and, while asleep, its bed) it keeps one value of its own: its
+ * {@linkplain #villagerType() villager type}, the biome a villager's clothes come from.
  */
-public class Guard extends PathfinderMob {
+public class Guard extends SavingMob {
     /** How far a guard looks for hostile mobs, horizontally, in blocks. */
     public static final double THREAT_RANGE = 16.0;
     private static final double THREAT_HEIGHT = 6.0;
@@ -83,6 +89,13 @@ public class Guard extends PathfinderMob {
     private static final int PRESENCE_JITTER = 10;
     /** A guard at rest runs its AI and movement one tick in this many. Even, so it lands on vanilla's full AI ticks. */
     private static final int REST_EVERY = 4;
+
+    /** The villager type a guard wears when it has no other: the plains, as a villager does. */
+    public static final String DEFAULT_VILLAGER_TYPE = "minecraft:plains";
+    private static final String VILLAGER_TYPE_KEY = "villager_type";
+    /** Synced, so clients draw the right clothes. */
+    private static final EntityDataAccessor<String> VILLAGER_TYPE =
+            SynchedEntityData.defineId(Guard.class, EntityDataSerializers.STRING);
 
     /** The first filter on what a scan returns; {@link #isThreat} does the rest. No capture, so no allocation. */
     private static final Predicate<Mob> MAY_THREATEN = mob -> mob instanceof Enemy && mob.isAlive();
@@ -103,13 +116,19 @@ public class Guard extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 30.0)
+                .add(Attributes.MAX_HEALTH, 20.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.5)
                 // The weapon adds its own damage on top, as it does for a player.
                 .add(Attributes.ATTACK_DAMAGE, 1.0)
                 // How far a guard keeps after a target, and what bounds a path search: a search visits at
                 // most sixteen nodes per block of it.
                 .add(Attributes.FOLLOW_RANGE, 16.0);
+    }
+
+    @Override
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(VILLAGER_TYPE, DEFAULT_VILLAGER_TYPE);
     }
 
     @Override
@@ -262,6 +281,32 @@ public class Guard extends PathfinderMob {
         return weapon.getItem() instanceof ProjectileWeaponItem ? new ItemStack(Items.ARROW) : ItemStack.EMPTY;
     }
 
+    // Clothes.
+
+    /**
+     * The id of the villager type whose clothes the guard wears, such as {@code minecraft:plains} or
+     * {@code minecraft:snow}: the biome it was born in, as for a villager.
+     */
+    public String villagerType() {
+        return entityData.get(VILLAGER_TYPE);
+    }
+
+    /** Dresses the guard as a villager of type {@code id}; anything that is not an id leaves it as it was. */
+    public void setVillagerType(String id) {
+        if (Identifier.tryParse(id) != null) entityData.set(VILLAGER_TYPE, id);
+    }
+
+    // Public, as the gametests read and write them directly.
+    @Override
+    public void saveExtra(Output output) {
+        output.putString(VILLAGER_TYPE_KEY, villagerType());
+    }
+
+    @Override
+    public void loadExtra(Input input) {
+        setVillagerType(input.getString(VILLAGER_TYPE_KEY, DEFAULT_VILLAGER_TYPE));
+    }
+
     // Gear.
 
     /**
@@ -342,6 +387,7 @@ public class Guard extends PathfinderMob {
     public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty,
                                         EntitySpawnReason reason, SpawnGroupData data) {
         SpawnGroupData result = super.finalizeSpawn(level, difficulty, reason, data);
+        setVillagerType(Vanilla.villagerTypeAt(level, blockPosition()));
         populateDefaultEquipmentSlots(getRandom(), difficulty);
         return result;
     }

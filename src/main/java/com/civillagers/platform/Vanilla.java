@@ -3,6 +3,7 @@ package com.civillagers.platform;
 import com.civillagers.Civillagers;
 import com.mojang.serialization.Codec;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -11,6 +12,7 @@ import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.function.Supplier;
@@ -47,6 +49,18 @@ public final class Vanilla {
         return level.isDarkOutside();
         //?} else
         //return level.isNight();
+    }
+
+    /**
+     * The id of the villager type for the biome at {@code pos}, such as {@code minecraft:plains}: what a
+     * villager born there would wear. 1.21.11 moved villager types into a data-driven registry looked up
+     * by key.
+     */
+    public static String villagerTypeAt(LevelReader level, BlockPos pos) {
+        //? if >=1.21.11 {
+        return net.minecraft.world.entity.npc.villager.VillagerType.byBiome(level.getBiome(pos)).identifier().toString();
+        //?} else
+        //return net.minecraft.core.registries.BuiltInRegistries.VILLAGER_TYPE.getKey(net.minecraft.world.entity.npc.VillagerType.byBiome(level.getBiome(pos))).toString();
     }
 
     /** Builds an entity type under {@code path} in the mod's namespace. 1.21.2 keys it by a resource key. */

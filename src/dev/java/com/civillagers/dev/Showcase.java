@@ -27,8 +27,9 @@ import java.util.UUID;
 
 /**
  * {@code /civillagers showcase}: a row of guards standing still in front of the player, each in different
- * gear, to look at the guard's model, its held items, its armor and its poses in a real client: drawing a
- * bow, raising a shield, aiming a loaded crossbow. With
+ * gear and the clothes of a different villager type, to look at the guard's model, its clothes, its held
+ * items, its armor and its poses in a real client: drawing a bow, raising a shield, aiming a loaded
+ * crossbow. With
  * {@code -Dcivillagers.showcase=true} it runs by itself shortly after the first player joins, so a client
  * launched straight into a world shows it with nobody typing.
  */
@@ -46,6 +47,12 @@ public final class Showcase {
             {Items.IRON_AXE, null, null, Items.GOLDEN_CHESTPLATE, Items.LEATHER_LEGGINGS, null},
             {Items.STONE_SWORD, Items.SHIELD, Items.CHAINMAIL_HELMET, Items.CHAINMAIL_CHESTPLATE, null, Items.IRON_BOOTS},
             {Items.CROSSBOW, null, Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, null, null},
+            {Items.WOODEN_SWORD, null, null, null, null, null},
+    };
+    /** The villager type each guard in the row wears, one of each of vanilla's. */
+    private static final String[] VILLAGER_TYPES = {
+            "minecraft:plains", "minecraft:taiga", "minecraft:desert", "minecraft:savanna",
+            "minecraft:snow", "minecraft:swamp", "minecraft:jungle",
     };
     /** The guard in the row that raises its shield. */
     private static final int BLOCKING = 4;
@@ -114,7 +121,8 @@ public final class Showcase {
             // a change made in that same tick, such as taking away the shield a new guard may roll, never
             // reaches it.
             Item[] outfit = OUTFITS[i];
-            Guard guard = CivEntities.guard().spawn(level, created -> dress(created, outfit), at,
+            String type = VILLAGER_TYPES[i];
+            Guard guard = CivEntities.guard().spawn(level, created -> dress(created, outfit, type), at,
                     EntitySpawnReason.MOB_SUMMONED, false, false);
             if (guard == null) continue;
             if (i == BLOCKING) {
@@ -130,9 +138,10 @@ public final class Showcase {
         return spawned;
     }
 
-    /** Puts {@code outfit} on {@code guard}, still, in the pose its weapon shows best. */
-    private static void dress(Guard guard, Item[] outfit) {
+    /** Puts {@code outfit} and the clothes of {@code type} on {@code guard}, still, in the pose its weapon shows best. */
+    private static void dress(Guard guard, Item[] outfit, String type) {
         guard.setNoAi(true);
+        guard.setVillagerType(type);
         for (int s = 0; s < SLOTS.length; s++) {
             Item item = outfit[s];
             guard.setItemSlot(SLOTS[s], item == null ? ItemStack.EMPTY : new ItemStack(item));

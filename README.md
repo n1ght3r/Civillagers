@@ -6,7 +6,7 @@
 Villages that grow into civilizations. Civillagers gives villages guards who patrol and defend them, a
 village chief who decides what the village needs next, and builders who expand the village on their own.
 
-**Status:** early development. Guards are in: spawn one with the Guard Spawn Egg, hand it gear by using
+**Status:** early development. Guards are in: spawn one with the Villager Guard Spawn Egg, hand it gear by using
 an item on it, and sneak with an empty hand to take gear back. The chief and builders come next.
 
 ## Supported versions

@@ -12,7 +12,7 @@ import net.minecraft.client.model.geom.ModelPart;
  * <p>One class per side of 1.21.2's render states; see {@link ClientVanilla}.
  */
 //? if >=1.21.2 {
-public final class GuardModel extends HumanoidModel<net.minecraft.client.renderer.entity.state.HumanoidRenderState> {
+public final class GuardModel extends HumanoidModel<GuardRenderer.State> {
     private final ModelPart jacket;
 
     public GuardModel(ModelPart root) {
@@ -21,7 +21,7 @@ public final class GuardModel extends HumanoidModel<net.minecraft.client.rendere
     }
 
     @Override
-    public void setupAnim(net.minecraft.client.renderer.entity.state.HumanoidRenderState state) {
+    public void setupAnim(GuardRenderer.State state) {
         super.setupAnim(state);
         jacket.visible = state.legsEquipment.isEmpty();
     }

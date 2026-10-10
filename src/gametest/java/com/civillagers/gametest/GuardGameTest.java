@@ -8,6 +8,7 @@ import com.civillagers.ai.GuardSleepGoal;
 import com.civillagers.ai.GuardTargetGoal;
 import com.civillagers.entity.CivEntities;
 import com.civillagers.entity.Guard;
+import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
@@ -28,9 +29,12 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
- * Guards: their gear, how often they look for targets, combat, patrol points and beds, idling with nobody
- * near, path searches in a fight, the shield, the crossbow, and the mobs that hunt them.
+ * Guards: their clothes, their gear, how often they look for targets, combat, patrol points and beds,
+ * idling with nobody near, path searches in a fight, the shield, the crossbow, and the mobs that hunt them.
  */
 public final class GuardGameTest {
     private static final BlockPos GUARD = new BlockPos(1, 2, 1);
@@ -42,8 +46,34 @@ public final class GuardGameTest {
         guard.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(guard.blockPosition()),
                 EntitySpawnReason.MOB_SUMMONED, null);
         TestFixtures.check(helper, guard.getMainHandItem().is(Items.IRON_SWORD), "a new guard should hold an iron sword");
-        TestFixtures.check(helper, guard.getMaxHealth() == 30.0F, "a guard has 30 health, not " + guard.getMaxHealth());
+        TestFixtures.check(helper, guard.getMaxHealth() == 20.0F, "a guard has a villager's 20 health, not " + guard.getMaxHealth());
         TestFixtures.check(helper, !guard.removeWhenFarAway(1000.0), "guards never despawn");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aGuardWearsTheClothesOfItsBiome(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(guard.blockPosition()),
+                EntitySpawnReason.MOB_SUMMONED, null);
+        String biome = Vanilla.villagerTypeAt(helper.getLevel(), guard.blockPosition());
+        TestFixtures.check(helper, guard.villagerType().equals(biome),
+                "a new guard should wear the clothes of its biome, " + biome + ", not " + guard.villagerType());
+
+        guard.setVillagerType("minecraft:snow");
+        Map<String, String> saved = new HashMap<>();
+        guard.saveExtra(saved::put);
+        Guard reloaded = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        reloaded.loadExtra(saved::getOrDefault);
+        TestFixtures.check(helper, reloaded.villagerType().equals("minecraft:snow"), "the villager type should survive a reload");
+
+        reloaded.setVillagerType("not an id!");
+        TestFixtures.check(helper, reloaded.villagerType().equals("minecraft:snow"), "a guard ignores a villager type that is not an id");
+        Guard old = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        old.loadExtra((key, fallback) -> fallback);
+        TestFixtures.check(helper, old.villagerType().equals(Guard.DEFAULT_VILLAGER_TYPE),
+                "a guard saved without a villager type should wear the plains' clothes");
         helper.succeed();
     }
 

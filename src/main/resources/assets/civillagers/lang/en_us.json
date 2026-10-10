@@ -1,6 +1,6 @@
 {
   "modmenu.nameTranslation.civillagers": "Civillagers",
   "modmenu.descriptionTranslation.civillagers": "Villages that grow into civilizations: guards, a village chief and builders who expand the village.",
-  "entity.civillagers.guard": "Guard",
-  "item.civillagers.guard_spawn_egg": "Guard Spawn Egg"
+  "entity.civillagers.guard": "Villager Guard",
+  "item.civillagers.guard_spawn_egg": "Villager Guard Spawn Egg"
 }

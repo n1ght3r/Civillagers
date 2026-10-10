@@ -124,6 +124,7 @@ the head (option A of five drawn, chosen 2026-10-10); the same file on every ver
 | 2.12 | Accept crossbows (charge, hold, shoot, the crossbow poses) | `aGuardShootsALoadedCrossbow`, `aGuardTakesACrossbowAndGivesItBackUnloaded`, `shots/guards.jsonl` | ✅ |
 | 2.13 | Zombies and raiders (not zombified piglins, drowned or witches) target guards as they target villagers (`MobMixin`) | `zombiesAndRaidersHuntGuards` | ✅ |
 | 2.14 | Leak check: open and leave a world with guards 5 times, then a class histogram: no `ServerLevel`, no `Guard`, nothing world-bound of the mod | `tools/agent/smoke/leak.jsonl` on every client node | ✅ |
+| 2.15 | A villager's 20 health; named Villager Guard; the clothes of its biome's villager type (saved, synced, drawn as a layer over vanilla's `type/<biome>.png`) | `aNewGuardCarriesASword`, `aGuardWearsTheClothesOfItsBiome`, `shots/guards.jsonl` | ✅ |
 
 **Budget (2.8, decided 2026-10-10).** The first target was "20 guards ≤ 0.15 ms/tick", below what any
 vanilla mob costs under this measurement: each guard's whole tick, its AI, its pathfinding and the
