@@ -13,6 +13,7 @@
     "issues": "https://github.com/n1ght3r/Civillagers/issues"
   },
   "license": "GPL-3.0-only",
+  "icon": "assets/civillagers/icon.png",
   "environment": "*",
   "entrypoints": {
     "main": ["com.civillagers.fabric.CivillagersFabric"],

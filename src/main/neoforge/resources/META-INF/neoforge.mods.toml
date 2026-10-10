@@ -14,6 +14,7 @@ displayName = "Civillagers"
 description = '''Villages that grow into civilizations: guards, a village chief and builders who expand the village.'''
 authors = "Nighter"
 displayURL = "https://github.com/n1ght3r/Civillagers"
+logoFile = "assets/civillagers/icon.png"
 
 # FML has no per-side mixin config: client-only mixins go in a config's own "client" list, which is how
 # civillagers.client.mixins.json keeps them off a dedicated server.
