@@ -24,6 +24,7 @@ import net.minecraft.world.item.ItemStack;
  * <p>The villager texture already has an arm and a hand where the crossed arms take them from: the arm at
  * (44, 22), 4x8x4, and the hands' bar at (40, 38). Each guard arm is that arm with half the bar below it
  * for a hand, twelve pixels long like a player's, so held items sit where they would in a player's hand.
+ * The arms hang flush against the body, as a player's do; the robe, half a pixel wider, tucks under them.
  */
 public final class GuardModelLayers {
     public static final ModelLayerLocation BODY = new ModelLayerLocation(Civillagers.id("guard"), "main");
@@ -31,8 +32,6 @@ public final class GuardModelLayers {
     public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/villager/villager.png");
     /** A helmet is drawn this much taller, to cover the villager's head: ten pixels where a player's is eight. */
     public static final float HELMET_STRETCH = 10.0F / 8.0F;
-    /** Pushes each arm half a pixel out, clear of the robe, which is half a pixel wider than the body. */
-    private static final float ARM_GAP = 0.5F;
 
     private GuardModelLayers() { }
 
@@ -53,12 +52,12 @@ public final class GuardModelLayers {
                 .addBox(-4.0F, 0.0F, -3.0F, 8.0F, 20.0F, 6.0F, new CubeDeformation(0.5F)), PartPose.ZERO);
 
         root.addOrReplaceChild("right_arm", CubeListBuilder.create()
-                .texOffs(44, 22).addBox(-3.0F - ARM_GAP, -2.0F, -2.0F, 4.0F, 8.0F, 4.0F)
-                .texOffs(40, 38).addBox(-3.0F - ARM_GAP, 6.0F, -2.0F, 4.0F, 4.0F, 4.0F),
+                .texOffs(44, 22).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 8.0F, 4.0F)
+                .texOffs(40, 38).addBox(-3.0F, 6.0F, -2.0F, 4.0F, 4.0F, 4.0F),
                 PartPose.offset(-5.0F, 2.0F, 0.0F));
         root.addOrReplaceChild("left_arm", CubeListBuilder.create().mirror()
-                .texOffs(44, 22).addBox(-1.0F + ARM_GAP, -2.0F, -2.0F, 4.0F, 8.0F, 4.0F)
-                .texOffs(40, 38).addBox(-1.0F + ARM_GAP, 6.0F, -2.0F, 4.0F, 4.0F, 4.0F),
+                .texOffs(44, 22).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 8.0F, 4.0F)
+                .texOffs(40, 38).addBox(-1.0F, 6.0F, -2.0F, 4.0F, 4.0F, 4.0F),
                 PartPose.offset(5.0F, 2.0F, 0.0F));
 
         root.addOrReplaceChild("right_leg", CubeListBuilder.create().texOffs(0, 22)
