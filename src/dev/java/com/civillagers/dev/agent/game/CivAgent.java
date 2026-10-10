@@ -41,6 +41,8 @@ public final class CivAgent {
     private static String side;
     private static Runnable exit;
     private static MinecraftServer server;
+    /** Whether no server runs: none started yet, or the last one has stopped. Set on the server thread. */
+    private static volatile boolean serverStopped = true;
 
     private CivAgent() { }
 
@@ -59,8 +61,12 @@ public final class CivAgent {
         CommonProbes.register(dispatcher, side);
         ServerProbes.register(dispatcher);
         if (client) clientProbes.accept(dispatcher);
-        Loader.onServerStarted(started -> server = started);
+        Loader.onServerStarted(started -> {
+            server = started;
+            serverStopped = false;
+        });
         DevLoader.onServerStopping(stopping -> server = null);
+        Loader.onServerStopped(stopped -> serverStopped = true);
     }
 
     /**
@@ -92,6 +98,11 @@ public final class CivAgent {
     /** The running server, integrated or dedicated, or null when there is none. */
     static MinecraftServer server() {
         return server;
+    }
+
+    /** Whether no server runs: none has started, or the last one has finished stopping. */
+    public static boolean serverStopped() {
+        return serverStopped;
     }
 
     /** Opens the queue and runs the launch's script, if it named one. Called once the process can answer. */

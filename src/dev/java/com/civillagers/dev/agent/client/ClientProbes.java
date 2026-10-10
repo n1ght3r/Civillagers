@@ -3,6 +3,7 @@ package com.civillagers.dev.agent.client;
 import com.civillagers.dev.agent.core.AgentDispatcher;
 import com.civillagers.dev.agent.core.AgentException;
 import com.civillagers.dev.agent.core.AgentReply;
+import com.civillagers.dev.agent.game.CivAgent;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -25,6 +26,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public final class ClientProbes {
     private static final int CAPTURE_POLL_TICKS = 2;
     private static final int CAPTURE_ATTEMPTS = 30;
+    /** How often, and how many times, a world change is looked at before its answer gives up: a minute. */
+    private static final int WORLD_POLL_TICKS = 5;
+    private static final int WORLD_ATTEMPTS = 240;
     private static int captures;
 
     private ClientProbes() { }
@@ -120,6 +124,26 @@ public final class ClientProbes {
             waitForCapture(dispatcher, reply, target, message, CAPTURE_ATTEMPTS);
         });
 
+        // Leaves the world for the title screen and answers once the integrated server has stopped, so a
+        // leak check can look for what the world left behind.
+        dispatcher.register("client.world.leave", (request, reply) -> {
+            Minecraft minecraft = client();
+            if (minecraft.level == null) throw new AgentException("not in a world; at " + screenName(minecraft));
+            AgentClientVanilla.leaveWorld(minecraft);
+            waitForWorld(dispatcher, reply, false, WORLD_ATTEMPTS);
+        });
+
+        // Opens a singleplayer world of this run directory, -Pquickplay's by default, and answers once the
+        // player is in it.
+        dispatcher.register("client.world.open", (request, reply) -> {
+            Minecraft minecraft = client();
+            if (minecraft.level != null) throw new AgentException("already in a world; leave it first");
+            String world = request.string("world", System.getProperty("civillagers.agent.quickplay"));
+            if (world == null || world.isBlank()) throw new AgentException("no world given, and no -Pquickplay world");
+            minecraft.createWorldOpenFlows().openWorld(world.strip(), () -> { });
+            waitForWorld(dispatcher, reply, true, WORLD_ATTEMPTS);
+        });
+
         // Commands go through the player's own connection, so the server sees them exactly as typed.
         dispatcher.register("client.command", (request, reply) -> {
             String command = request.string("command").strip();
@@ -128,6 +152,28 @@ public final class ClientProbes {
             JsonObject result = new JsonObject();
             result.addProperty("command", command);
             reply.ok(result);
+        });
+    }
+
+    /** Answers once the client is in a world with its player ({@code inWorld}), or out of one with no server. */
+    private static void waitForWorld(AgentDispatcher dispatcher, AgentReply reply, boolean inWorld, int attemptsLeft) {
+        dispatcher.defer(WORLD_POLL_TICKS, reply, () -> {
+            Minecraft minecraft = client();
+            boolean done = inWorld ? minecraft.level != null && minecraft.player != null
+                    : minecraft.level == null && minecraft.getSingleplayerServer() == null && CivAgent.serverStopped();
+            if (done) {
+                JsonObject result = new JsonObject();
+                result.addProperty("inWorld", minecraft.level != null);
+                result.addProperty("screen", screenName(minecraft));
+                reply.ok(result);
+                return;
+            }
+            if (attemptsLeft <= 1) {
+                reply.fail((inWorld ? "the world did not open" : "the world did not close") + " within "
+                        + WORLD_ATTEMPTS * WORLD_POLL_TICKS + " ticks; at " + screenName(minecraft));
+                return;
+            }
+            waitForWorld(dispatcher, reply, inWorld, attemptsLeft - 1);
         });
     }
 

@@ -1,0 +1,43 @@
+// The leak check of docs/ROADMAP.md section 1.4: open and close a singleplayer world with guards in it five
+// times, then count what is left of it in the heap after a full collection. Nothing of a world may survive
+// leaving it: no level, server or client, no guard, no village, nothing of the mod's world-bound classes.
+// Runs in a throwaway world on any node:
+//     python tools/agent/new_world.py <node> LeakAgent
+//     ./gradlew ":<node>:runClient" -Pagent=tools/agent/smoke/leak.jsonl -Pquickplay=LeakAgent
+//     python tools/agent/drive.py run/<node>/agent/client tools/agent/smoke/leak.jsonl --verify --max-age 10
+// The window opens, but never takes the mouse pointer.
+{"id": "probe", "command": "probe", "expect": {"ok": true, "result.side": "client"}}
+{"id": "join", "command": "wait", "args": {"ticks": 300}}
+{"id": "inworld", "command": "client.info", "expect": {"ok": true, "result.inWorld": true, "result.mouseGrabbed": false}}
+// Guards and a village to leave behind: the showcase row, and a bell under the player.
+{"id": "guards", "command": "server.command", "args": {"command": "civillagers showcase", "as": "@only"}, "expect": {"ok": true}}
+{"id": "bell", "command": "server.command", "args": {"command": "execute at @a run setblock ~ ~-1 ~ minecraft:bell", "as": "@only"}, "expect": {"ok": true}}
+{"id": "settle", "command": "wait", "args": {"ticks": 100}}
+{"id": "counted", "command": "server.guards", "checks": [{"left": "result.count", "op": "ge", "value": 5}]}
+{"id": "leave1", "command": "client.world.leave", "expect": {"ok": true, "result.inWorld": false}}
+{"id": "open2", "command": "client.world.open", "expect": {"ok": true, "result.inWorld": true}}
+{"id": "play2", "command": "wait", "args": {"ticks": 100}}
+{"id": "leave2", "command": "client.world.leave", "expect": {"ok": true, "result.inWorld": false}}
+{"id": "open3", "command": "client.world.open", "expect": {"ok": true, "result.inWorld": true}}
+{"id": "play3", "command": "wait", "args": {"ticks": 100}}
+{"id": "leave3", "command": "client.world.leave", "expect": {"ok": true, "result.inWorld": false}}
+{"id": "open4", "command": "client.world.open", "expect": {"ok": true, "result.inWorld": true}}
+{"id": "play4", "command": "wait", "args": {"ticks": 100}}
+{"id": "leave4", "command": "client.world.leave", "expect": {"ok": true, "result.inWorld": false}}
+{"id": "open5", "command": "client.world.open", "expect": {"ok": true, "result.inWorld": true}}
+{"id": "play5", "command": "wait", "args": {"ticks": 100}}
+// The guards came back with the world each time: the check is meaningful only if they were there to leak.
+{"id": "reloaded", "command": "server.guards", "checks": [{"left": "result.count", "op": "ge", "value": 5}]}
+// Vanilla keeps the last client level after leaving it, until the next world opens (a world with nothing of
+// the mod in it shows the same), and that level holds its own copies of the guards. So the last round
+// removes the guards before leaving: any guard still in the heap afterwards is one the mod kept.
+{"id": "dismiss", "command": "server.command", "args": {"command": "kill @e[type=civillagers:guard]", "as": "@only"}, "expect": {"ok": true}}
+{"id": "gone", "command": "wait", "args": {"ticks": 40}}
+{"id": "none", "command": "server.guards", "expect": {"ok": true, "result.count": 0}}
+{"id": "leave5", "command": "client.world.leave", "expect": {"ok": true, "result.inWorld": false}}
+// A few ticks on the title screen, so nothing still on its way out is counted.
+{"id": "title", "command": "wait", "args": {"ticks": 100}}
+// Counted after a full collection. The classes are named in this order: result.classes.<n>.instances.
+// No server level and no server; at most the one client level vanilla keeps; nothing of the mod.
+// VillageTicker is the mod's one stateless ticker, a singleton for as long as the mod is loaded.
+{"id": "heap", "command": "jvm.histogram", "args": {"classes": ["net.minecraft.server.level.ServerLevel", "net.minecraft.client.multiplayer.ClientLevel", "net.minecraft.client.server.IntegratedServer", "com.civillagers.entity.Guard"], "prefixes": ["com.civillagers.entity.", "com.civillagers.ai.", "com.civillagers.village."], "ignore": ["com.civillagers.village.VillageTicker"]}, "expect": {"ok": true, "result.classes.0.instances": 0, "result.classes.2.instances": 0, "result.classes.3.instances": 0, "result.matchedInstances": 0}, "checks": [{"left": "result.classes.1.instances", "op": "le", "value": 1}]}

@@ -74,6 +74,7 @@ and a game thread that stops ticking for 300 s is halted (`-Dcivillagers.agent.f
 | `probe` | | side, loader, Minecraft version, run directory, queue, whether a server runs, the command list |
 | `wait` | `ticks` | once that many game ticks have run |
 | `stop` | | after stopping this process |
+| `jvm.histogram` | `classes` (exact names), `prefixes`, `ignore` | live instances after a full collection, as `jcmd GC.class_histogram` counts them: each of `classes` in order (a list, since a dotted path cannot name a class), and every class under `prefixes` with instances, leaving out lambdas, enums and `ignore` |
 | `server.info` | | dedicated, tick count, players, difficulty |
 | `server.command` | `command`, `as` (a player name, or `@only` for the one player online) | the command's feedback, collected; it runs with the console's permission |
 | `server.guards` | | every guard: position, health, sleeping, aggressive, target type, gear by slot |
@@ -84,6 +85,8 @@ and a game thread that stops ticking for 300 s is halted (`-Dcivillagers.agent.f
 | `client.hud.toggle` | | whether the HUD is hidden now, as F1 hides it |
 | `client.capture` | `name` | a PNG in `screenshots/`, once it is on disk |
 | `client.command` | `command` | after sending it through the player's connection (needs the player's own permission) |
+| `client.world.leave` | | once the client is back on the title screen and the integrated server has stopped |
+| `client.world.open` | `world` (`-Pquickplay`'s by default) | once the player is in that world of `run/<node>/saves` |
 
 ## Rules
 

@@ -59,6 +59,20 @@ final class AgentClientVanilla {
         *///?}
     }
 
+    /**
+     * Leaves the world for the title screen, as the pause menu's button does, stopping the integrated
+     * server. After 1.21.1 the client does all of it in one call.
+     */
+    static void leaveWorld(Minecraft minecraft) {
+        //? if >1.21.1 {
+        minecraft.disconnectFromWorld(net.minecraft.client.multiplayer.ClientLevel.DEFAULT_QUIT_MESSAGE);
+        //?} else {
+        /*minecraft.level.disconnect();
+        minecraft.disconnect(new net.minecraft.client.gui.screens.GenericMessageScreen(Component.translatable("menu.savingLevel")));
+        minecraft.setScreen(new net.minecraft.client.gui.screens.TitleScreen());
+        *///?}
+    }
+
     /** The target the world and the GUI are drawn into. 26.2 moved it onto the game renderer. */
     private static RenderTarget mainTarget(Minecraft minecraft) {
         //? if >=26.2 {
