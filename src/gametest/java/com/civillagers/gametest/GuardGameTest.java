@@ -8,18 +8,25 @@ import com.civillagers.ai.GuardSleepGoal;
 import com.civillagers.ai.GuardTargetGoal;
 import com.civillagers.entity.CivEntities;
 import com.civillagers.entity.Guard;
+import com.civillagers.entity.ZombieGuards;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -30,14 +37,100 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Guards: their clothes, their gear, how often they look for targets, combat, patrol points and beds,
- * idling with nobody near, path searches in a fight, the shield, the crossbow, and the mobs that hunt them.
+ * Guards: their clothes, their gear, turning into zombies and being cured, how often they look for
+ * targets, combat, patrol points and beds, idling with nobody near, path searches in a fight, the shield,
+ * the crossbow, and the mobs that hunt them.
  */
 public final class GuardGameTest {
     private static final BlockPos GUARD = new BlockPos(1, 2, 1);
+
+    @GameTest
+    public void aGuardTurnsWithAVillagersOdds(GameTestHelper helper) {
+        RandomSource random = RandomSource.create(1L);
+        for (int i = 0; i < 20; i++) {
+            TestFixtures.check(helper, !ZombieGuards.turns(Difficulty.PEACEFUL, random) && !ZombieGuards.turns(Difficulty.EASY, random),
+                    "a guard never turns on Peaceful or Easy");
+            TestFixtures.check(helper, ZombieGuards.turns(Difficulty.HARD, random), "a guard always turns on Hard");
+        }
+        int turned = 0;
+        for (int i = 0; i < 100; i++) if (ZombieGuards.turns(Difficulty.NORMAL, random)) turned++;
+        TestFixtures.check(helper, turned > 20 && turned < 80, "a guard turns about half the time on Normal, not " + turned + " in 100");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aZombieGuardKeepsItsGearAndIsCuredBackToAGuard(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.setVillagerType("minecraft:snow");
+        guard.equipGear(new ItemStack(Items.DIAMOND_SWORD));
+        guard.equipGear(new ItemStack(Items.IRON_HELMET));
+        guard.setCustomName(Component.literal("Gregor"));
+
+        ZombieVillager zombie = ZombieGuards.zombify(helper.getLevel(), guard);
+        TestFixtures.check(helper, zombie != null && guard.isRemoved(), "the guard should turn into a zombie villager");
+        TestFixtures.check(helper, zombie.entityTags().contains(ZombieGuards.TAG), "the zombie should remember it was a guard");
+        TestFixtures.check(helper, zombie.getMainHandItem().is(Items.DIAMOND_SWORD) && zombie.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
+                "the zombie should keep the guard's gear");
+        TestFixtures.check(helper, Vanilla.villagerTypeOf(zombie, "").equals("minecraft:snow"), "the zombie should keep the guard's clothes");
+        TestFixtures.check(helper, zombie.isPersistenceRequired(), "a zombie guard never despawns with the gear it carries");
+
+        // Cured as vanilla cures a zombie villager: weakness, then a golden apple.
+        zombie.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 600));
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.GOLDEN_APPLE));
+        TestFixtures.interact(zombie, player, InteractionHand.MAIN_HAND);
+        TestFixtures.check(helper, zombie.isConverting(), "a golden apple should start the cure");
+        TestFixtures.finishCureSoon(zombie);
+
+        helper.succeedWhen(() -> {
+            List<Guard> guards = helper.getLevel().getEntitiesOfClass(Guard.class, zombie.getBoundingBox().inflate(2.0),
+                    found -> found.getCustomName() != null && found.getCustomName().getString().equals("Gregor"));
+            TestFixtures.check(helper, zombie.isRemoved() && guards.size() == 1, "the cured zombie should come back a guard");
+            Guard cured = guards.get(0);
+            TestFixtures.check(helper, cured.getMainHandItem().is(Items.DIAMOND_SWORD) && cured.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
+                    "the cured guard should keep its gear");
+            TestFixtures.check(helper, cured.villagerType().equals("minecraft:snow"), "the cured guard should keep its clothes");
+            TestFixtures.check(helper, !cured.entityTags().contains(ZombieGuards.TAG), "the cured guard is no zombie any more");
+        });
+    }
+
+    @GameTest
+    public void aGuardAZombieKillsOnHardRisesAsAZombie(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.equipGear(new ItemStack(Items.IRON_SWORD));
+        Mob zombie = helper.spawnWithNoFreeWill(TestFixtures.zombie(), new BlockPos(3, 2, 3));
+        // The difficulty is the server's, so it is changed and put back at once, before any other test ticks.
+        net.minecraft.server.MinecraftServer server = helper.getLevel().getServer();
+        Difficulty before = helper.getLevel().getDifficulty();
+        server.setDifficulty(Difficulty.HARD, true);
+        boolean drops;
+        try {
+            drops = TestFixtures.zombieKills(zombie, guard);
+        } finally {
+            server.setDifficulty(before, true);
+        }
+        TestFixtures.check(helper, !drops && guard.isRemoved(), "on Hard a guard a zombie kills should turn, dropping nothing");
+        List<ZombieVillager> risen = helper.getLevel().getEntitiesOfClass(ZombieVillager.class, guard.getBoundingBox().inflate(1.0),
+                found -> found.entityTags().contains(ZombieGuards.TAG));
+        TestFixtures.check(helper, risen.size() == 1 && risen.get(0).getMainHandItem().is(Items.IRON_SWORD),
+                "the guard should rise as a zombie villager with its sword");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void anOrdinaryZombieVillagerIsLeftToVanilla(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        ZombieVillager zombie = helper.spawnWithNoFreeWill(Vanilla.zombieVillagerType(), GUARD);
+        TestFixtures.check(helper, ZombieGuards.cure(helper.getLevel(), zombie) == null && !zombie.isRemoved(),
+                "a zombie villager that was never a guard is cured into a villager, as in vanilla");
+        helper.succeed();
+    }
 
     @GameTest
     public void aNewGuardCarriesASword(GameTestHelper helper) {

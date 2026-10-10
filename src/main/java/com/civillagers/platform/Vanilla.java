@@ -5,16 +5,19 @@ import com.mojang.serialization.Codec;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.saveddata.SavedData;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -61,6 +64,56 @@ public final class Vanilla {
         return net.minecraft.world.entity.npc.villager.VillagerType.byBiome(level.getBiome(pos)).identifier().toString();
         //?} else
         //return net.minecraft.core.registries.BuiltInRegistries.VILLAGER_TYPE.getKey(net.minecraft.world.entity.npc.VillagerType.byBiome(level.getBiome(pos))).toString();
+    }
+
+    /** The zombie villager's entity type. By 26.2 vanilla's entity types moved out of {@code EntityType} into {@code EntityTypes}. */
+    public static EntityType<ZombieVillager> zombieVillagerType() {
+        //? if >=26.2 {
+        return net.minecraft.world.entity.EntityTypes.ZOMBIE_VILLAGER;
+        //?} else
+        //return EntityType.ZOMBIE_VILLAGER;
+    }
+
+    /**
+     * Turns {@code from} into a new mob of type {@code to} in its place, as a zombie turns a villager: name,
+     * equipment and its drop chances carried over, {@code from} removed. {@code after} sets up the new mob.
+     * Returns it, or null if it could not be made. 1.21.2 has the conversion take its settings as
+     * {@code ConversionParams} and run {@code after} before the new mob joins the level.
+     */
+    public static <T extends Mob> T convert(Mob from, EntityType<T> to, Consumer<T> after) {
+        //? if >=1.21.2 {
+        return from.convertTo(to, net.minecraft.world.entity.ConversionParams.single(from, true, true), after::accept);
+        //?} else {
+        /*T converted = from.convertTo(to, true);
+        if (converted != null) after.accept(converted);
+        return converted;
+        *///?}
+    }
+
+    /** The id of the zombie villager's villager type, such as {@code minecraft:snow}, or {@code fallback}. */
+    public static String villagerTypeOf(ZombieVillager zombie, String fallback) {
+        //? if >=1.21.11 {
+        return zombie.getVillagerData().type().unwrapKey().map(key -> key.identifier().toString()).orElse(fallback);
+        //?} else {
+        /*net.minecraft.resources.Identifier id = net.minecraft.core.registries.BuiltInRegistries.VILLAGER_TYPE.getKey(zombie.getVillagerData().getType());
+        return id != null ? id.toString() : fallback;
+        *///?}
+    }
+
+    /** Gives the zombie villager the villager type {@code id}; an id that names no type changes nothing. */
+    public static void setVillagerType(ZombieVillager zombie, String id) {
+        //? if >=1.21.11 {
+        Identifier parsed = Identifier.tryParse(id);
+        if (parsed == null) return;
+        zombie.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.VILLAGER_TYPE)
+                .get(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.VILLAGER_TYPE, parsed))
+                .ifPresent(type -> zombie.setVillagerData(zombie.getVillagerData().withType(type)));
+        //?} else {
+        /*Identifier parsed = Identifier.tryParse(id);
+        if (parsed == null) return;
+        net.minecraft.core.registries.BuiltInRegistries.VILLAGER_TYPE.getOptional(parsed)
+                .ifPresent(type -> zombie.setVillagerData(zombie.getVillagerData().setType(type)));
+        *///?}
     }
 
     /** Builds an entity type under {@code path} in the mod's namespace. 1.21.2 keys it by a resource key. */

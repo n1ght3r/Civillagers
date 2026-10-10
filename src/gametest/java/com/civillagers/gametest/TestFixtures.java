@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ChargedProjectiles;
@@ -132,5 +133,33 @@ final class TestFixtures {
         mob.interact(player, hand, mob.position());
         //?} else
         //mob.interact(player, hand);
+    }
+
+    /**
+     * Brings a zombie villager's cure to its last tick, so it finishes on the next one. Vanilla starts a
+     * cure at three to five minutes; 26.1 has a setter for what is left, and before it the time is set
+     * through the zombie's saved data, which starts the cure over with it.
+     */
+    static void finishCureSoon(ZombieVillager zombie) {
+        //? if >=26.1 {
+        zombie.setVillagerConversionTime(1);
+        //?} else {
+        /*net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        zombie.addAdditionalSaveData(tag);
+        tag.putInt("ConversionTime", 1);
+        zombie.readAdditionalSaveData(tag);
+        *///?}
+    }
+
+    /**
+     * Tells {@code zombie} it killed {@code victim}, as a dying mob tells its killer, and returns whether
+     * the victim should drop its loot. 1.21.2 passes the damage source as well.
+     */
+    static boolean zombieKills(Mob zombie, net.minecraft.world.entity.LivingEntity victim) {
+        net.minecraft.server.level.ServerLevel level = (net.minecraft.server.level.ServerLevel) zombie.level();
+        //? if >=1.21.2 {
+        return zombie.killedEntity(level, victim, zombie.damageSources().mobAttack(zombie));
+        //?} else
+        //return zombie.killedEntity(level, victim);
     }
 }

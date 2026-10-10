@@ -13,6 +13,9 @@
   archers and against a creeper about to blow up, and are hunted by zombies and raiders as villagers are.
 - Guards are named Villager Guard, have a villager's 20 health, and wear the clothes of the biome they
   were born in, as villagers do.
+- A guard a zombie kills can rise as a zombie villager that keeps its gear and clothes, with the odds a
+  villager has (never on Easy, half the time on Normal, always on Hard). Cure it as a zombie villager,
+  with weakness and a golden apple, and it comes back a guard.
 - Guards nobody is near (48 blocks) idle: they stop patrolling, look for targets less often and think one
   tick in four while they stand still. Path searches in a fight are capped and only follow a target that
   moved.

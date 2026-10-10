@@ -3,7 +3,9 @@
   "package": "com.civillagers.mixin",
   "compatibilityLevel": "${java}",
   "mixins": [
-    "MobMixin"
+    "MobMixin",
+    "ZombieMixin",
+    "ZombieVillagerMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }

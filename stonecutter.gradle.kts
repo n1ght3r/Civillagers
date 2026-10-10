@@ -50,6 +50,8 @@ stonecutter parameters {
                     "import net.minecraft.world.entity.monster.Zombie;")
             replace("import net.minecraft.world.entity.monster.zombie.Drowned;",
                     "import net.minecraft.world.entity.monster.Drowned;")
+            replace("import net.minecraft.world.entity.monster.zombie.ZombieVillager;",
+                    "import net.minecraft.world.entity.monster.ZombieVillager;")
             replace("import net.minecraft.world.entity.monster.zombie.ZombifiedPiglin;",
                     "import net.minecraft.world.entity.monster.ZombifiedPiglin;")
         }
@@ -68,6 +70,11 @@ stonecutter parameters {
         string(current.parsed < "26.1") {
             replace("FabricPackOutput", "FabricDataOutput")
             replace("FabricTagsProvider", "FabricTagProvider")
+        }
+
+        // 26.1 renamed an entity's scoreboard tags, the ones /tag sets, to tell them from registry tags.
+        string(current.parsed < "26.1") {
+            replace(".entityTags()", ".getTags()")
         }
 
         // The NeoForge nodes run the same tests through a harness of their own, which reads a @GameTest
