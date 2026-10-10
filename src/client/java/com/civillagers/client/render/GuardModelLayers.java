@@ -14,6 +14,7 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 
 /**
@@ -68,14 +69,20 @@ public final class GuardModelLayers {
     }
 
     /**
-     * How the guard holds {@code arm}: drawing a bow while it fights with one, raising a shield it is
-     * blocking with, holding out whatever else it carries, or hanging empty.
+     * How the guard holds {@code arm}: drawing a bow while it fights with one, charging a crossbow or
+     * aiming a loaded one, raising a shield it is blocking with, holding out whatever else it carries, or
+     * hanging empty. Charging is the guard using the crossbow and loaded is the bolt the crossbow carries,
+     * both of which the client knows, as it does for a pillager.
      */
     public static HumanoidModel.ArmPose armPose(Guard guard, HumanoidArm arm) {
         boolean main = arm == guard.getMainArm();
         ItemStack held = main ? guard.getMainHandItem() : guard.getOffhandItem();
         if (held.isEmpty()) return HumanoidModel.ArmPose.EMPTY;
         if (main && guard.isAggressive() && held.getItem() instanceof BowItem) return HumanoidModel.ArmPose.BOW_AND_ARROW;
+        if (main && held.getItem() instanceof CrossbowItem) {
+            if (guard.isUsingItem() && guard.getUseItem() == held) return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
+            if (CrossbowItem.isCharged(held)) return HumanoidModel.ArmPose.CROSSBOW_HOLD;
+        }
         if (guard.isUsingItem() && guard.getUseItem() == held && guard.isBlocking()) return HumanoidModel.ArmPose.BLOCK;
         return HumanoidModel.ArmPose.ITEM;
     }

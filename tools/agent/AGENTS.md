@@ -12,7 +12,8 @@ Every path is relative to the repository root; each script's header says how to 
 | `clean.py` | Deletes the throwaway worlds `new_world.py` made |
 | `smoke/server-probe.jsonl` | A dedicated server's queue answers with nobody online |
 | `smoke/boot.jsonl` | A driven client comes up, opens its world and never takes the mouse |
-| `shots/guards.jsonl` | Five guards in different gear, captured to `run/<node>/agent/client/screenshots/guards.png` |
+| `smoke/leak.jsonl` | The leak check of the roadmap's section 1.4: a world with guards and a bell opened and left five times, then no server level, no server, no guard and nothing of the mod's world-bound classes left in the heap |
+| `shots/guards.jsonl` | Six guards in different gear and poses (a drawn bow, a raised shield, a loaded crossbow), captured to `run/<node>/agent/client/screenshots/guards.png` |
 | `shots/guard-egg.jsonl` | The Guard Spawn Egg in hand and in the hotbar beside the villager's, captured to `guard-egg.png` |
 
 `new_world.py` takes its settings from another world of the node (`--from <world>`, or the first one in

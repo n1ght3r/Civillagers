@@ -1,6 +1,7 @@
 package com.civillagers.dev;
 
 import com.civillagers.command.CivillagersCommands;
+import com.civillagers.dev.platform.DevVanilla;
 import com.civillagers.entity.CivEntities;
 import com.civillagers.entity.Guard;
 import com.civillagers.platform.Vanilla;
@@ -12,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.Item;
@@ -21,10 +23,12 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * {@code /civillagers showcase}: a row of guards standing still in front of the player, each in different
- * gear, to look at the guard's model, its held items and its armor in a real client. With
+ * gear, to look at the guard's model, its held items, its armor and its poses in a real client: drawing a
+ * bow, raising a shield, aiming a loaded crossbow. With
  * {@code -Dcivillagers.showcase=true} it runs by itself shortly after the first player joins, so a client
  * launched straight into a world shows it with nobody typing.
  */
@@ -41,14 +45,23 @@ public final class Showcase {
             {Items.BOW, null, Items.IRON_HELMET, null, null, null},
             {Items.IRON_AXE, null, null, Items.GOLDEN_CHESTPLATE, Items.LEATHER_LEGGINGS, null},
             {Items.STONE_SWORD, Items.SHIELD, Items.CHAINMAIL_HELMET, Items.CHAINMAIL_CHESTPLATE, null, Items.IRON_BOOTS},
+            {Items.CROSSBOW, null, Items.LEATHER_HELMET, Items.LEATHER_CHESTPLATE, null, null},
     };
+    /** The guard in the row that raises its shield. */
+    private static final int BLOCKING = 4;
     private static final EquipmentSlot[] SLOTS = {
             EquipmentSlot.MAINHAND, EquipmentSlot.OFFHAND,
             EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET,
     };
 
+    /** Ticks after spawning before the shield goes up; see {@link #tick}. */
+    private static final int RAISE_DELAY = 20;
+
     private static int waited;
     private static boolean shown;
+    /** The guard that raises its shield once {@link #raiseIn} has run out, by UUID, never the entity. */
+    private static UUID raising;
+    private static int raiseIn;
 
     private Showcase() { }
 
@@ -65,6 +78,14 @@ public final class Showcase {
 
     /** The automatic showcase, for a client launched with {@link #PROPERTY}. */
     static void tick(MinecraftServer server) {
+        // The shield goes up a second after the row appears: a guard already using an item when a client
+        // first sees it reaches that client, on 1.21.1, before its equipment does, and the client drops the use.
+        if (raising != null && --raiseIn <= 0) {
+            for (ServerLevel level : server.getAllLevels()) {
+                if (level.getEntity(raising) instanceof Guard guard) guard.startUsingItem(InteractionHand.OFF_HAND);
+            }
+            raising = null;
+        }
         if (shown || !Boolean.getBoolean(PROPERTY)) return;
         List<ServerPlayer> players = server.getPlayerList().getPlayers();
         if (players.isEmpty() || ++waited < DELAY_TICKS) return;
@@ -89,15 +110,17 @@ public final class Showcase {
             int bx = (int) Math.floor(x);
             int bz = (int) Math.floor(z);
             BlockPos at = new BlockPos(bx, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz), bz);
-            Guard guard = CivEntities.guard().spawn(level, at, EntitySpawnReason.MOB_SUMMONED);
+            // Dressed before it joins the level: a client in range is sent the guard as it joins, and on 1.21.1
+            // a change made in that same tick, such as taking away the shield a new guard may roll, never
+            // reaches it.
+            Item[] outfit = OUTFITS[i];
+            Guard guard = CivEntities.guard().spawn(level, created -> dress(created, outfit), at,
+                    EntitySpawnReason.MOB_SUMMONED, false, false);
             if (guard == null) continue;
-            guard.setNoAi(true);
-            for (int s = 0; s < SLOTS.length; s++) {
-                Item item = OUTFITS[i][s];
-                guard.setItemSlot(SLOTS[s], item == null ? ItemStack.EMPTY : new ItemStack(item));
+            if (i == BLOCKING) {
+                raising = guard.getUUID();
+                raiseIn = RAISE_DELAY;
             }
-            // A guard with a bow draws it when it fights; show that pose.
-            if (guard.holdsBow()) guard.setAggressive(true);
             float yaw = (float) (Math.atan2(player.getZ() - guard.getZ(), player.getX() - guard.getX()) * 180.0 / Math.PI) - 90.0F;
             guard.setYRot(yaw);
             guard.setYHeadRot(yaw);
@@ -105,5 +128,17 @@ public final class Showcase {
             spawned++;
         }
         return spawned;
+    }
+
+    /** Puts {@code outfit} on {@code guard}, still, in the pose its weapon shows best. */
+    private static void dress(Guard guard, Item[] outfit) {
+        guard.setNoAi(true);
+        for (int s = 0; s < SLOTS.length; s++) {
+            Item item = outfit[s];
+            guard.setItemSlot(SLOTS[s], item == null ? ItemStack.EMPTY : new ItemStack(item));
+        }
+        // A guard with a bow draws it when it fights, and one with a crossbow loads it; show those poses.
+        if (guard.holdsBow()) guard.setAggressive(true);
+        if (guard.holdsCrossbow()) guard.setItemSlot(EquipmentSlot.MAINHAND, DevVanilla.loadedCrossbow());
     }
 }
