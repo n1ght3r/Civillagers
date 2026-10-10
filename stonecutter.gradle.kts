@@ -37,6 +37,9 @@ stonecutter parameters {
             replace("Identifier", "ResourceLocation")
             replace(".identifier()", ".location()")
             replace("net.minecraft.util.Util", "net.minecraft.Util")
+            // 1.21.11 also sorted the entity classes into packages by kind, villagers into npc.villager.
+            replace("import net.minecraft.world.entity.npc.villager.Villager;",
+                    "import net.minecraft.world.entity.npc.Villager;")
         }
         string(current.parsed >= "1.21" && current.parsed < "1.21.11") {
             replace("Identifier.fromNamespaceAndPath(", "ResourceLocation.fromNamespaceAndPath(")

@@ -7,7 +7,11 @@
   "environment": "server",
   "entrypoints": {
     "fabric-gametest": [
-      "com.civillagers.gametest.BootGameTest"
+      "com.civillagers.gametest.BootGameTest",
+      "com.civillagers.gametest.VillageDataGameTest",
+      "com.civillagers.gametest.VillageMergeGameTest",
+      "com.civillagers.gametest.VillageDetectionGameTest",
+      "com.civillagers.gametest.VillageSchedulerGameTest"
     ]
   },
   "depends": {

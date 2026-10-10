@@ -1,12 +1,20 @@
 package com.civillagers.platform;
 
 import com.civillagers.Civillagers;
+import com.mojang.brigadier.CommandDispatcher;
+import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.MinecraftServer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppedEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 
 import java.nio.file.Path;
@@ -16,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * Every call into the mod loader, for NeoForge. The counterpart of the Fabric class of the same name;
@@ -64,6 +73,29 @@ public final class Loader {
             listening = true;
         }
         PENDING.computeIfAbsent(registry, key -> new ArrayList<>()).add(registration);
+    }
+
+    /** Runs {@code action} once a server has finished starting and its levels are loaded. */
+    public static void onServerStarted(Consumer<MinecraftServer> action) {
+        NeoForge.EVENT_BUS.addListener((ServerStartedEvent event) -> action.accept(event.getServer()));
+    }
+
+    /**
+     * Runs {@code action} once a server has stopped and saved. Every cache the mod keeps is cleared from
+     * here: in singleplayer each world opened is a new server, and anything left over leaks.
+     */
+    public static void onServerStopped(Consumer<MinecraftServer> action) {
+        NeoForge.EVENT_BUS.addListener((ServerStoppedEvent event) -> action.accept(event.getServer()));
+    }
+
+    /** Runs {@code action} at the end of every server tick, after every level has ticked. */
+    public static void onServerTickEnd(Consumer<MinecraftServer> action) {
+        NeoForge.EVENT_BUS.addListener((ServerTickEvent.Post event) -> action.accept(event.getServer()));
+    }
+
+    /** Runs {@code action} with the server's command dispatcher whenever commands are (re)built. */
+    public static void onRegisterCommands(Consumer<CommandDispatcher<CommandSourceStack>> action) {
+        NeoForge.EVENT_BUS.addListener((RegisterCommandsEvent event) -> action.accept(event.getDispatcher()));
     }
 
     private static IEventBus modBus() {

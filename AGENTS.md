@@ -85,6 +85,7 @@ its budget.
 |---|---|
 | `com.civillagers` | `Civillagers`, the mod's entry point, called by each loader's entrypoint |
 | `com.civillagers.village` | The village as saved data: members, chief, stockpile, level, plans |
+| `com.civillagers.command` | `/civillagers`; today only `debug stats`, `debug here`, `debug scan` |
 | `com.civillagers.entity` | Guard, village chief and builder entity types and professions |
 | `com.civillagers.ai` | Brain behaviours: patrol, defend, gather, build, the chief's decisions |
 | `com.civillagers.building` | Structure templates, build plans and step-by-step placement |
