@@ -1,7 +1,11 @@
 package com.civillagers;
 
+import com.civillagers.ai.GuardPathBudget;
 import com.civillagers.command.CivillagersCommands;
+import com.civillagers.entity.CivEntities;
+import com.civillagers.entity.GuardStats;
 import com.civillagers.platform.Loader;
+import com.civillagers.village.StockpileKeys;
 import com.civillagers.village.VillageStats;
 import com.civillagers.village.VillageTicker;
 import net.minecraft.resources.Identifier;
@@ -24,9 +28,11 @@ public final class Civillagers {
      * registration event.
      */
     public static void initialize() {
+        CivEntities.register();
         Loader.onServerStarted(server -> clearCaches());
         Loader.onServerStopped(server -> clearCaches());
         Loader.onServerTickEnd(VillageTicker::onServerTick);
+        Loader.onServerTickEnd(server -> GuardStats.endTick());
         Loader.onRegisterCommands(CivillagersCommands::register);
         LOGGER.info("Civillagers initialized for Minecraft {}", MINECRAFT);
     }
@@ -37,11 +43,15 @@ public final class Civillagers {
      */
     public static void clearCaches() {
         VillageStats.clear();
+        GuardStats.clear();
+        GuardPathBudget.clear();
+        StockpileKeys.clear();
     }
 
     /** Entries held by the caches {@link #clearCaches()} empties; 0 right after it. */
     public static int cachedEntries() {
-        return VillageStats.samples();
+        return VillageStats.samples() + GuardStats.samples() + (GuardStats.scans() > 0 ? 1 : 0)
+                + (GuardPathBudget.refused() > 0 ? 1 : 0) + StockpileKeys.size();
     }
 
     /** An id in the mod's namespace. */

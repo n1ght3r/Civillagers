@@ -1,0 +1,22 @@
+# The dev tools mod on NeoForge, the counterpart of src/dev/resources/fabric.mod.json. Development only,
+# never published. A NeoForge mod id cannot contain a hyphen, so it is not the Fabric `-dev` spelling.
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "GPL-3.0-only"
+
+[[mods]]
+modId = "civillagers_dev"
+version = "1.0.0"
+displayName = "Civillagers Dev Tools"
+description = '''Development-only tooling for Civillagers: /civillagers benchmark. Never published.'''
+
+# Times entity ticks for the benchmark's comparison with vanilla mobs.
+[[mixins]]
+config = "civillagers.dev.mixins.json"
+
+[[dependencies.civillagers_dev]]
+modId = "civillagers"
+type = "required"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "BOTH"

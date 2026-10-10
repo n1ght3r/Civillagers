@@ -11,7 +11,8 @@
       "com.civillagers.gametest.VillageDataGameTest",
       "com.civillagers.gametest.VillageMergeGameTest",
       "com.civillagers.gametest.VillageDetectionGameTest",
-      "com.civillagers.gametest.VillageSchedulerGameTest"
+      "com.civillagers.gametest.VillageSchedulerGameTest",
+      "com.civillagers.gametest.GuardGameTest"
     ]
   },
   "depends": {

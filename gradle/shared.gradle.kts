@@ -151,6 +151,90 @@ tasks.register("checkLang") {
     }
 }
 
+/**
+ * Prepares what `runBenchmark` writes into and works in: the directory the report and any flight
+ * recording land in, and a seed for the benchmark's own world, `-Pcivillagers.benchmark.world`, which each
+ * buildscript passes to the server as `--world`. Only the seed lives here, because a seed is read from
+ * `server.properties` and nothing on the command line can set it.
+ *
+ * Only an empty or missing `level-seed` is filled in, so a seed someone put there by hand is left alone,
+ * and only a world created afterwards is affected: the dev world runServer opens keeps the seed in its own
+ * `level.dat`. The report's `environment.levelSeed` says what a run actually measured.
+ */
+tasks.register("benchmarkRunDirectory") {
+    description = "Makes the benchmark's output directory and fills in its seed when there is none"
+
+    val seed = providers.gradleProperty("civillagers.benchmark.seed").get()
+    val properties = rootProject.file("run/${project.name}/server.properties")
+    // JFR writes its recording as the JVM starts and does not create the directory for it.
+    val output = rootProject.file("run/${project.name}/benchmark")
+    // The run directory is shared with runServer and edited by the server itself.
+    outputs.upToDateWhen { false }
+
+    doLast {
+        output.mkdirs()
+        val key = "level-seed="
+        if (!properties.isFile) {
+            properties.parentFile.mkdirs()
+            // The server fills in every other property on its first start and keeps this one. It still
+            // writes eula.txt and refuses to start until that is accepted by hand.
+            properties.writeText(key + seed + System.lineSeparator())
+            return@doLast
+        }
+        val lines = properties.readLines()
+        val index = lines.indexOfFirst { it.startsWith(key) }
+        if (index >= 0 && lines[index].substring(key.length).isNotBlank()) return@doLast
+        val updated = if (index >= 0) lines.toMutableList().also { it[index] = key + seed } else lines + (key + seed)
+        properties.writeText(updated.joinToString(System.lineSeparator(), postfix = System.lineSeparator()))
+    }
+}
+// Both plugins create their run tasks while the buildscript is evaluated, before this file is applied.
+tasks.matching { it.name == "runBenchmark" }.configureEach { dependsOn("benchmarkRunDirectory") }
+
+/**
+ * Prepares a client that nobody will click through: in `run/<node>/options.txt`, the first-launch
+ * accessibility screen is marked as seen, since it stands between `-Pquickplay` and the world, and the
+ * focus pause is turned off, since a driven window is never focused. Only for `runClient` with
+ * `-Pagent`, `-Pdriven` or `-Pquickplay`; a played client keeps the player's own options.
+ */
+tasks.register("agentRunDirectory") {
+    description = "Lets an unattended client skip the first-launch screen and keep running unfocused"
+    val options = rootProject.file("run/${project.name}/options.txt")
+    outputs.upToDateWhen { false }
+    doLast {
+        val wanted = mapOf("onboardAccessibility" to "false", "pauseOnLostFocus" to "false")
+        val lines = if (options.isFile) options.readLines().toMutableList() else mutableListOf()
+        for ((key, value) in wanted) {
+            val index = lines.indexOfFirst { it.startsWith("$key:") }
+            if (index >= 0) lines[index] = "$key:$value" else lines.add("$key:$value")
+        }
+        options.parentFile.mkdirs()
+        options.writeText(lines.joinToString(System.lineSeparator(), postfix = System.lineSeparator()))
+    }
+}
+val unattendedClient = listOf("agent", "driven", "quickplay").any { providers.gradleProperty(it).isPresent }
+tasks.matching { it.name == "runClient" }.configureEach { if (unattendedClient) dependsOn("agentRunDirectory") }
+
+/**
+ * Fails when the agent's queue starts naming the game. `dev/agent/core` is the half that knows nothing of
+ * Minecraft, a mod loader or the mod, so it stays plain Java and Gson; everything else lives in
+ * `dev/agent/game` and `dev/agent/client`.
+ */
+tasks.register("checkAgentCore") {
+    group = "verification"
+    description = "Fails when the agent core imports Minecraft, a mod loader or the mod"
+    val root = rootProject.file("src/dev/java/com/civillagers/dev/agent/core")
+    val forbidden = Regex("""^import\s+(net\.minecraft|com\.mojang|net\.fabricmc|net\.neoforged|com\.civillagers\.(?!dev\.agent\.core))""")
+    inputs.dir(root)
+    doLast {
+        val offenders = root.walk().filter { it.extension == "java" }.flatMap { file ->
+            file.readLines().withIndex().filter { (_, line) -> forbidden.containsMatchIn(line.trim()) }
+                .map { (index, line) -> "${file.relativeTo(rootProject.projectDir).invariantSeparatorsPath}:${index + 1}: ${line.trim()}" }
+        }.toList()
+        check(offenders.isEmpty()) { "The agent core must not name the game:\n" + offenders.joinToString("\n") }
+    }
+}
+
 /** Collects the jars every node produces into one directory. */
 tasks.register<Copy>("buildAndCollect") {
     group = "build"
@@ -216,7 +300,8 @@ tasks.named<ProcessResources>("processGametestResources") {
 tasks.register("ci") {
     group = "verification"
     description = "Builds the jar and runs every check and the gametests, as CI does"
-    dependsOn(listOf("buildAndCollect", "checkLoaderSeam", "checkVersionSeam", "checkLang", "runGametest") +
+    // devClasses: the dev tools compile on every node, though CI runs neither them nor the benchmark.
+    dependsOn(listOf("buildAndCollect", "checkLoaderSeam", "checkVersionSeam", "checkLang", "checkAgentCore", "devClasses", "runGametest") +
         handed<List<String>>("civ.loaderChecks"))
 }
 // The gametests and the checks read what the build wrote; run them after it so a failure points at them.

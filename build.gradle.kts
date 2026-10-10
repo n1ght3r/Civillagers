@@ -1,3 +1,4 @@
+import com.civillagers.buildlogic.flightRecorder
 import com.civillagers.buildlogic.requiredJava
 
 plugins {
@@ -40,6 +41,18 @@ repositories {
  */
 val gametest: SourceSet = sourceSets.create("gametest")
 
+/**
+ * Development tools: `/civillagers benchmark`. The same arrangement as the gametests, its own source set
+ * and its own small mod, loaded by runServer and runBenchmark and never packaged. See src/dev/java/AGENTS.md.
+ */
+val dev: SourceSet = sourceSets.create("dev")
+
+/**
+ * What runClient runs: the dev tools on top of the client, so `/civillagers showcase` works in a dev
+ * world. No sources of its own; it only puts both on one classpath.
+ */
+val devClient: SourceSet = sourceSets.create("devClient")
+
 loom {
     splitEnvironmentSourceSets()
 
@@ -50,6 +63,9 @@ loom {
         }
         register("${modId}_gametest") {
             sourceSet(gametest)
+        }
+        register("$modId-dev") {
+            sourceSet(dev)
         }
     }
 
@@ -66,9 +82,50 @@ loom {
                 layout.buildDirectory.file("gametest/report.xml").get().asFile.absolutePath,
             )
         }
+
+        // runServer loads the dev tools, so /civillagers benchmark can be typed into its console; runClient
+        // too, for /civillagers showcase. `-Pshowcase` shows the guards by itself once a world is open.
+        named("server") {
+            sourceSet = dev.name
+        }
+        named("client") {
+            sourceSet = devClient.name
+            if (providers.gradleProperty("showcase").isPresent) systemProperties.put("civillagers.showcase", "true")
+        }
+
+        // Unattended benchmark: starts the dedicated server, runs `/civillagers benchmark <-Pbenchmark>`
+        // once it is up, writes run/<node>/benchmark/latest.json and stops the server. See
+        // src/dev/java/com/civillagers/dev/benchmark/AGENTS.md.
+        register("benchmark") {
+            server()
+            displayName = "Benchmark"
+            sourceSet = dev.name
+            systemProperties.put("civillagers.benchmark", providers.gradleProperty("benchmark").getOrElse("quick"))
+            systemProperties.put("civillagers.benchmark.exit", "true")
+            // A world of its own beside runServer's, generated from the fixed seed gradle/shared.gradle.kts
+            // puts in server.properties, so a run never measures the dev world.
+            programArguments.addAll("--world", providers.gradleProperty("civillagers.benchmark.world").get())
+            if (providers.gradleProperty("profile").isPresent) {
+                jvmArguments.addAll(flightRecorder(rootProject.file("run/${project.name}/benchmark/latest.jfr")))
+            }
+        }
     }
 
     runConfigs.all {
+        // The agent queue; see src/dev/java/com/civillagers/dev/agent/AGENTS.md. `-Pagent=<file>` answers
+        // that file once the game is up and then stops it; `-Pdriven` makes a client leave the mouse alone.
+        providers.gradleProperty("agent").orNull?.let { script ->
+            systemProperties.put("civillagers.agent.script", rootProject.file(script).absolutePath)
+            systemProperties.put("civillagers.agent.script.exit", "true")
+        }
+        if (providers.gradleProperty("driven").isPresent) systemProperties.put("civillagers.agent.driven", "true")
+        // `-Pquickplay=<world>` opens that singleplayer world of run/<node>/saves straight from launch.
+        if (name == "client") {
+            providers.gradleProperty("quickplay").orNull?.let { world ->
+                programArguments.addAll(listOf("--quickPlaySingleplayer", world))
+                systemProperties.put("civillagers.agent.quickplay", world)
+            }
+        }
         // One run directory per node: a world saved by one Minecraft version is not readable by another.
         // The gametest runner and datagen get their own again, so a failed run cannot leave a broken
         // world behind for runServer.
@@ -101,6 +158,8 @@ sourceSets.named("client") {
     resources.srcDir("src/client/$loader/resources")
 }
 gametest.java.srcDir("src/gametest/$loader/java")
+dev.java.srcDir("src/dev/$loader/java")
+dev.resources.srcDir("src/dev/$loader/resources")
 
 /**
  * Every datapack and asset JSON the mod ships that is not written by hand, from `src/datagen`. Keyed by
@@ -140,6 +199,14 @@ tasks.named("runDatagen") {
 // The gametests compile and run against the mod and everything the mod uses.
 gametest.compileClasspath += sourceSets.main.get().compileClasspath + sourceSets.main.get().output
 gametest.runtimeClasspath += sourceSets.main.get().runtimeClasspath + sourceSets.main.get().output
+// So do the dev tools.
+dev.compileClasspath += sourceSets.main.get().compileClasspath + sourceSets.main.get().output
+dev.runtimeClasspath += sourceSets.main.get().runtimeClasspath + sourceSets.main.get().output
+// The agent's client half names client classes. Loom's split keeps them out of the mod, where common code
+// reaching one is a mistake; a tool whose job is to drive a client is on both sides by definition. Only
+// the client entrypoint loads those classes, so a dedicated server never does.
+dev.compileClasspath += sourceSets["client"].compileClasspath + sourceSets["client"].output
+devClient.runtimeClasspath = dev.output + dev.runtimeClasspath + sourceSets["client"].runtimeClasspath
 
 /**
  * Adds a client-only mod dependency. Loom prefixes these configurations with `mod` where it remaps
@@ -175,6 +242,12 @@ tasks.processResources {
     )
     inputs.properties(props)
     filesMatching("fabric.mod.json") { expand(props) }
+    filesMatching("*.mixins.json") { expand("java" to "JAVA_$javaVersion") }
+}
+
+// So do the dev tools'.
+tasks.named<ProcessResources>("processDevResources") {
+    inputs.property("java", javaVersion)
     filesMatching("*.mixins.json") { expand("java" to "JAVA_$javaVersion") }
 }
 

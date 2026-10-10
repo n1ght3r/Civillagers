@@ -37,9 +37,18 @@ stonecutter parameters {
             replace("Identifier", "ResourceLocation")
             replace(".identifier()", ".location()")
             replace("net.minecraft.util.Util", "net.minecraft.Util")
-            // 1.21.11 also sorted the entity classes into packages by kind, villagers into npc.villager.
+            // 1.21.11 also sorted the entity classes into packages by kind: villagers into npc.villager, golems
+            // into animal.golem, arrows into projectile.arrow.
             replace("import net.minecraft.world.entity.npc.villager.Villager;",
                     "import net.minecraft.world.entity.npc.Villager;")
+            replace("import net.minecraft.world.entity.projectile.arrow.AbstractArrow;",
+                    "import net.minecraft.world.entity.projectile.AbstractArrow;")
+            replace("import net.minecraft.world.entity.animal.golem.IronGolem;",
+                    "import net.minecraft.world.entity.animal.IronGolem;")
+        }
+        // 1.21.2 renamed MobSpawnType, the reason passed to finalizeSpawn, to EntitySpawnReason.
+        string(current.parsed < "1.21.2") {
+            replace("EntitySpawnReason", "MobSpawnType")
         }
         string(current.parsed >= "1.21" && current.parsed < "1.21.11") {
             replace("Identifier.fromNamespaceAndPath(", "ResourceLocation.fromNamespaceAndPath(")

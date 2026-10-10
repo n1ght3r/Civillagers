@@ -1,5 +1,9 @@
 package com.civillagers.client;
 
+import com.civillagers.client.platform.ClientLoader;
+import com.civillagers.client.platform.GuardRenderer;
+import com.civillagers.entity.CivEntities;
+
 public final class CivillagersClient {
     private CivillagersClient() { }
 
@@ -8,5 +12,7 @@ public final class CivillagersClient {
      * from here, through {@code client/platform/ClientLoader}.
      */
     public static void initialize() {
+        GuardRenderer.registerLayers();
+        ClientLoader.registerEntityRenderer(CivEntities::guard, GuardRenderer::new);
     }
 }

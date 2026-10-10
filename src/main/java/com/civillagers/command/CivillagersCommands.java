@@ -1,6 +1,9 @@
 package com.civillagers.command;
 
 import com.civillagers.Civillagers;
+import com.civillagers.ai.GuardPathBudget;
+import com.civillagers.ai.GuardTargetGoal;
+import com.civillagers.entity.GuardStats;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.VillageDetector;
@@ -22,7 +25,7 @@ import java.util.Locale;
  * {@code /civillagers}. Today only {@code debug}, for game masters:
  *
  * <ul>
- *   <li>{@code debug stats}: village count, what village work costs per tick, cache sizes;</li>
+ *   <li>{@code debug stats}: village count, what village work and guards cost per tick, cache sizes;</li>
  *   <li>{@code debug here}: the village at the command's position;</li>
  *   <li>{@code debug scan}: look for villages around the command's position now, rather than waiting
  *       for discovery to come round.</li>
@@ -65,11 +68,18 @@ public final class CivillagersCommands {
                 Civillagers: %d villages in %d levels, %d with their center loaded
                 Tick: mean %.4f ms, max %.4f ms over the last %d ticks (budget %.2f ms, at most %d updates per tick)
                 Since start: %d village updates, %d discovery scans
+                Guards: %d ticking, mean %.4f ms, max %.4f ms per tick for all of them; %.3f target scans per guard per %d ticks
+                Guard paths: at most %d new walks per tick, %d deferred since start
                 Caches: %d runtime lookup entries across levels, stats window %d""",
                 villages, levels, loaded,
                 VillageStats.meanMillis(), VillageStats.maxMillis(), VillageStats.samples(),
                 VillageScheduler.budgetNanos() / 1_000_000.0, VillageScheduler.maxPerTick(),
                 VillageStats.updates(), VillageStats.discoveries(),
+                GuardStats.lastGuards(), GuardStats.meanMillis(), GuardStats.maxMillis(),
+                GuardStats.guardTicks() == 0 ? 0.0
+                        : GuardStats.scans() * (double) GuardTargetGoal.SCAN_INTERVAL / GuardStats.guardTicks(),
+                GuardTargetGoal.SCAN_INTERVAL,
+                GuardPathBudget.PER_TICK, GuardPathBudget.refused(),
                 lookups, VillageStats.WINDOW);
         source.sendSuccess(() -> Component.literal(text), false);
         return villages;
@@ -84,9 +94,9 @@ public final class CivillagersCommands {
             return 0;
         }
         String text = String.format(Locale.ROOT,
-                "Village #%d: center %s, radius %d, %d bells, %d members, %d beds, %d workstations, level %d, founded at tick %d",
+                "Village #%d: center %s, radius %d, %d bells, %d members, %d guards, %d beds, %d workstations, level %d, founded at tick %d",
                 village.id(), village.center().toShortString(), village.radius(), village.anchorCount(),
-                village.memberCount(), village.beds(), village.workstations(), village.level(), village.founded());
+                village.memberCount(), village.guardCount(), village.beds(), village.workstations(), village.level(), village.founded());
         source.sendSuccess(() -> Component.literal(text), false);
         return village.id();
     }

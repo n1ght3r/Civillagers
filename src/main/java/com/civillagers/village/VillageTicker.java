@@ -1,5 +1,6 @@
 package com.civillagers.village;
 
+import com.civillagers.entity.Guard;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
@@ -18,7 +19,7 @@ import java.util.UUID;
  *
  * <p>An update checks its bells first, every time: a bell that is gone leaves the village, which may split
  * or disband it. The slower checks take turns, one per update, so a village never does them all at once:
- * recounting beds and workstations, and finding which villagers live there.
+ * recounting beds and workstations, and finding which villagers and guards live there.
  */
 public final class VillageTicker implements VillageScheduler.Work {
     public static final VillageTicker INSTANCE = new VillageTicker();
@@ -96,24 +97,30 @@ public final class VillageTicker implements VillageScheduler.Work {
     }
 
     /**
-     * Finds the villagers within the village. With every chunk's entities loaded, they are the members;
-     * otherwise they join and nobody leaves, since a member out of sight may only be unloaded.
+     * Finds the villagers and guards within the village. With every chunk's entities loaded, they are the
+     * members and the guards; otherwise they join and nobody leaves, since one out of sight may only be
+     * unloaded.
      */
     private static void findMembers(ServerLevel level, Villages villages, Village village) {
         BlockPos center = village.center();
         int r = village.radius();
         AABB box = new AABB(center.getX() - r, center.getY() - MEMBER_SCAN_HEIGHT, center.getZ() - r,
                 center.getX() + r + 1, center.getY() + MEMBER_SCAN_HEIGHT, center.getZ() + r + 1);
-        List<Villager> found = level.getEntitiesOfClass(Villager.class, box,
+        List<Villager> villagers = level.getEntitiesOfClass(Villager.class, box,
                 villager -> villager.isAlive() && village.contains(villager.blockPosition()));
-        boolean changed;
+        List<Guard> guards = level.getEntitiesOfClass(Guard.class, box,
+                guard -> guard.isAlive() && village.contains(guard.blockPosition()));
+        boolean changed = false;
         if (VillageDetector.allEntitiesLoaded(level, center, r)) {
-            ObjectLinkedOpenHashSet<UUID> ids = new ObjectLinkedOpenHashSet<>(found.size());
-            for (Villager villager : found) ids.add(villager.getUUID());
-            changed = village.replaceMembers(ids);
+            ObjectLinkedOpenHashSet<UUID> ids = new ObjectLinkedOpenHashSet<>(villagers.size());
+            for (Villager villager : villagers) ids.add(villager.getUUID());
+            changed |= village.replaceMembers(ids);
+            ids = new ObjectLinkedOpenHashSet<>(guards.size());
+            for (Guard guard : guards) ids.add(guard.getUUID());
+            changed |= village.replaceGuards(ids);
         } else {
-            changed = false;
-            for (Villager villager : found) changed |= village.addMember(villager.getUUID());
+            for (Villager villager : villagers) changed |= village.addMember(villager.getUUID());
+            for (Guard guard : guards) changed |= village.addGuard(guard.getUUID());
         }
         if (changed) villages.contentChanged();
     }

@@ -1,0 +1,8 @@
+// A client comes up, stays up, and with -Pquickplay=<world> opens that world. It never takes the mouse:
+//     ./gradlew ":<node>:runClient" -Pagent=tools/agent/smoke/boot.jsonl -Pquickplay=GuardsAgent
+//     python tools/agent/drive.py run/<node>/agent/client tools/agent/smoke/boot.jsonl --verify --max-age 10
+{"id": "probe", "command": "probe", "expect": {"ok": true, "result.side": "client"}}
+{"id": "settle", "command": "wait", "args": {"ticks": 200}}
+{"id": "info", "command": "client.info", "expect": {"ok": true, "result.driven": true, "result.mouseGrabbed": false}}
+{"id": "play", "command": "wait", "args": {"ticks": 200}}
+{"id": "still", "command": "client.info", "expect": {"ok": true, "result.quickplayFailed": false, "result.mouseGrabbed": false}}

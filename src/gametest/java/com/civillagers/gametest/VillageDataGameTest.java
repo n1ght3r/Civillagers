@@ -35,6 +35,8 @@ public final class VillageDataGameTest {
         Village second = villages.addAnchor(new BlockPos(1000, 64, 1000), 3L);
         UUID member = new UUID(0, 42);
         first.addMember(member);
+        UUID guard = new UUID(0, 7);
+        first.addGuard(guard);
         first.addToStockpile(Civillagers.id("planks"), 12);
         first.addToStockpile(Civillagers.id("stone"), 5);
 
@@ -48,6 +50,7 @@ public final class VillageDataGameTest {
         TestFixtures.check(helper, again.center().equals(first.center()) && again.radius() == first.radius(),
                 "center and radius follow from the bells");
         TestFixtures.check(helper, again.members().equals(first.members()), "members should survive a reload");
+        TestFixtures.check(helper, again.guards().contains(guard) && again.guardCount() == 1, "guards should survive a reload");
         TestFixtures.check(helper, again.stockpile(Civillagers.id("planks")) == 12
                 && again.stockpile(Civillagers.id("stone")) == 5, "the stockpile should survive a reload");
         TestFixtures.check(helper, again.founded() == 1L, "the founding time should survive a reload");
@@ -77,6 +80,8 @@ public final class VillageDataGameTest {
         Village village = new Villages().addAnchor(new BlockPos(0, 64, 0), 0L);
         for (int i = 0; i < Village.MAX_MEMBERS + 10; i++) village.addMember(new UUID(0, i));
         TestFixtures.check(helper, village.memberCount() == Village.MAX_MEMBERS, "members stop at the cap");
+        for (int i = 0; i < Village.MAX_GUARDS + 10; i++) village.addGuard(new UUID(1, i));
+        TestFixtures.check(helper, village.guardCount() == Village.MAX_GUARDS, "guards stop at the cap");
         helper.succeed();
     }
 

@@ -1,3 +1,4 @@
+import com.civillagers.buildlogic.flightRecorder
 import com.civillagers.buildlogic.requiredJava
 
 plugins {
@@ -23,6 +24,8 @@ val neoForgeVersion = property("deps.neoforge") as String
 val javaVersion = requiredJava { sc.current.parsed >= it }
 /** NeoForge mod ids cannot contain a hyphen, so both loaders use this one for the gametests. */
 val gametestModId = "${modId}_gametest"
+/** The dev tools' mod id; the Fabric one, `civillagers-dev`, has a hyphen NeoForge refuses. */
+val devModId = "${modId}_dev"
 
 // The loader goes in the version so the jar never collides with the Fabric jar of the same Minecraft
 // version in build/libs/.
@@ -87,6 +90,17 @@ val gametest: SourceSet = sourceSets.create("gametest") {
 }
 
 /*
+ * The dev tools, `/civillagers benchmark`, as their own small mod like the gametests. `src/dev/neoforge`
+ * holds the entrypoint and the loader seam they need. See src/dev/java/AGENTS.md.
+ */
+val dev: SourceSet = sourceSets.create("dev") {
+    java.srcDir("src/dev/$loader/java")
+    resources.srcDir("src/dev/$loader/resources")
+    compileClasspath += main.compileClasspath + main.output
+    runtimeClasspath += main.runtimeClasspath + main.output
+}
+
+/*
  * The optional mods runClient loads. They go on that run alone, not on `runtimeOnly`, where they would
  * load into runServer and runGametest too. A run's classpath is its source set's runtime classpath, so
  * runClient gets a source set with no sources of its own, whose runtime classpath is `main`'s plus these.
@@ -96,27 +110,56 @@ val gametest: SourceSet = sourceSets.create("gametest") {
  */
 val clientRunMods: Configuration = configurations.create("clientRunMods")
 val clientRun: SourceSet = sourceSets.create("clientRun") {
-    runtimeClasspath += main.output + main.runtimeClasspath + clientRunMods
+    runtimeClasspath += dev.output + main.output + main.runtimeClasspath + clientRunMods
+}
+/** What runServer and runBenchmark run: the mod and the dev tools, so the benchmark can be typed in. */
+val serverRun: SourceSet = sourceSets.create("serverRun") {
+    runtimeClasspath += dev.output + main.output + main.runtimeClasspath
 }
 
 neoForge {
     mods {
         create(modId) { sourceSet(main) }
         create(gametestModId) { sourceSet(gametest) }
+        create(devModId) { sourceSet(dev) }
     }
 
     runs {
         val node = project.name
         configureEach {
+            // The agent queue, as on the Fabric nodes: see build.gradle.kts.
+            providers.gradleProperty("agent").orNull?.let { script ->
+                systemProperty("civillagers.agent.script", rootProject.file(script).absolutePath)
+                systemProperty("civillagers.agent.script.exit", "true")
+            }
+            if (providers.gradleProperty("driven").isPresent) systemProperty("civillagers.agent.driven", "true")
             // One run directory per node, for the reason build.gradle.kts gives.
             gameDirectory.set(rootProject.file(if (name == "gametest") "run/$node/gametest" else "run/$node"))
         }
         create("client") {
             client()
             sourceSet = clientRun
+            // `-Pshowcase` shows the guards by itself once a world is open; see Showcase.
+            if (providers.gradleProperty("showcase").isPresent) systemProperty("civillagers.showcase", "true")
+            providers.gradleProperty("quickplay").orNull?.let { world ->
+                programArguments.addAll("--quickPlaySingleplayer", world)
+                systemProperty("civillagers.agent.quickplay", world)
+            }
         }
         create("server") {
             server()
+            sourceSet = serverRun
+        }
+        // Unattended benchmark, as on the Fabric nodes: see build.gradle.kts.
+        create("benchmark") {
+            server()
+            sourceSet = serverRun
+            systemProperty("civillagers.benchmark", providers.gradleProperty("benchmark").getOrElse("quick"))
+            systemProperty("civillagers.benchmark.exit", "true")
+            programArguments.addAll("--world", providers.gradleProperty("civillagers.benchmark.world").get())
+            if (providers.gradleProperty("profile").isPresent) {
+                jvmArguments.addAll(flightRecorder(rootProject.file("run/${project.name}/benchmark/latest.jfr")))
+            }
         }
         // The GameTest runner: a dedicated server that runs every registered test headlessly and exits
         // with the number of failed required tests, the same contract as the Fabric runner.
@@ -133,7 +176,10 @@ neoForge {
         // ModDevGradle loads every declared mod by default, and each run only has the classes of its own
         // source set. So each is told which mods to load: the gametests belong to the gametest run alone.
         val mainMod = mods.named(modId)
-        listOf("client", "server").forEach { run -> named(run) { loadedMods.set(mainMod.map { setOf(it) }) } }
+        val devMod = mods.named(devModId)
+        listOf("client", "server", "benchmark").forEach { run ->
+            named(run) { loadedMods.set(mainMod.zip(devMod) { main, tools -> setOf(main, tools) }) }
+        }
         named("gametest") { loadedMods.set(mainMod.zip(mods.named(gametestModId)) { a, b -> setOf(a, b) }) }
     }
 }
@@ -157,6 +203,11 @@ tasks.processResources {
     filesMatching("*.mixins.json") { expand("java" to "JAVA_$javaVersion") }
     // Datagen's hash cache, which Loom keeps out of the Fabric jar and nothing keeps out of this one.
     exclude("**/.cache/**")
+}
+
+tasks.named<ProcessResources>("processDevResources") {
+    inputs.property("java", javaVersion)
+    filesMatching("*.mixins.json") { expand("java" to "JAVA_$javaVersion") }
 }
 
 /**

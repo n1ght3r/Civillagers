@@ -5,6 +5,12 @@ import com.mojang.serialization.Codec;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.saveddata.SavedData;
 
 import java.util.function.Supplier;
@@ -32,6 +38,44 @@ public final class Vanilla {
         return net.minecraft.commands.Commands.LEVEL_OWNERS.check(source.permissions());
         //?} else
         //return source.hasPermission(4);
+    }
+
+    /** Whether it is night in {@code level}, the way villagers tell when to go to bed. */
+    public static boolean isNight(Level level) {
+        // Renamed by 26.1 to say what it measures: the sky's darkness, not the clock.
+        //? if >=26.1 {
+        return level.isDarkOutside();
+        //?} else
+        //return level.isNight();
+    }
+
+    /** Builds an entity type under {@code path} in the mod's namespace. 1.21.2 keys it by a resource key. */
+    public static <T extends Entity> EntityType<T> buildEntityType(EntityType.Builder<T> builder, String path) {
+        //? if >=1.21.2 {
+        return builder.build(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.ENTITY_TYPE, Civillagers.id(path)));
+        //?} else
+        //return builder.build(Civillagers.id(path).toString());
+    }
+
+    /** The properties of an item registered under {@code path}. 1.21.2 has an item carry its own id. */
+    public static Item.Properties itemProperties(String path) {
+        //? if >=1.21.2 {
+        return new Item.Properties().setId(net.minecraft.resources.ResourceKey.create(
+                net.minecraft.core.registries.Registries.ITEM, Civillagers.id(path)));
+        //?} else
+        //return new Item.Properties();
+    }
+
+    /**
+     * A spawn egg for {@code type}. Before 1.21.5 an egg is a template tinted with two colours; by 26.1 it
+     * is an ordinary item with a texture of its own, and the colours are unused.
+     */
+    public static Item spawnEgg(EntityType<? extends Mob> type, int background, int highlight, Item.Properties properties) {
+        //? if >=26.1 {
+        return new SpawnEggItem(properties.spawnEgg(type));
+        //?} else
+        //return new SpawnEggItem(type, background, highlight, properties);
     }
 
     /**

@@ -1,4 +1,6 @@
 {
   "modmenu.nameTranslation.civillagers": "Civillagers",
-  "modmenu.descriptionTranslation.civillagers": "Những ngôi làng phát triển thành nền văn minh: lính gác, trưởng làng và thợ xây mở rộng làng."
+  "modmenu.descriptionTranslation.civillagers": "Những ngôi làng phát triển thành nền văn minh: lính gác, trưởng làng và thợ xây mở rộng làng.",
+  "entity.civillagers.guard": "Lính gác",
+  "item.civillagers.guard_spawn_egg": "Trứng triệu hồi Lính gác"
 }

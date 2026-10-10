@@ -1,0 +1,20 @@
+// A row of guards in different gear, captured for a person to look at: the model, held items, armor.
+// Runs in a throwaway world on any node:
+//     python tools/agent/new_world.py <node> GuardsAgent
+//     ./gradlew ":<node>:runClient" -Pagent=tools/agent/shots/guards.jsonl -Pquickplay=GuardsAgent
+//     python tools/agent/drive.py run/<node>/agent/client tools/agent/shots/guards.jsonl --verify --max-age 10
+// The capture lands in run/<node>/agent/client/screenshots/guards.png. The window opens, but never
+// takes the mouse pointer.
+{"id": "probe", "command": "probe", "expect": {"ok": true, "result.side": "client"}}
+// Long enough for the world to finish joining and the chunks round the player to load.
+{"id": "join", "command": "wait", "args": {"ticks": 300}}
+{"id": "inworld", "command": "client.info", "expect": {"ok": true, "result.inWorld": true, "result.mouseGrabbed": false}}
+{"id": "level", "command": "client.look", "args": {"pitch": 0}}
+{"id": "showcase", "command": "server.command", "args": {"command": "civillagers showcase", "as": "@only"}, "expect": {"ok": true}}
+{"id": "settle", "command": "wait", "args": {"ticks": 40}}
+{"id": "guards", "command": "server.guards", "checks": [{"left": "result.count", "op": "ge", "value": 5}]}
+// Down a little, so the row stands in the middle of the frame, and without the HUD in the way.
+{"id": "frame", "command": "client.look", "args": {"pitch": 12}}
+{"id": "hud", "command": "client.hud.toggle", "expect": {"result.hudHidden": true}}
+{"id": "draw", "command": "wait", "args": {"ticks": 20}}
+{"id": "capture", "command": "client.capture", "args": {"name": "guards"}, "expect": {"ok": true}}

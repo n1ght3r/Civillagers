@@ -1,0 +1,10 @@
+// What a dedicated server answers with nobody online: the queue opens, the autorun property works, and
+// the mod's debug command is reachable. Run it with
+//     ./gradlew ":<node>:runServer" -Pagent=tools/agent/smoke/server-probe.jsonl
+// which answers every line into run/<node>/agent/server/out.jsonl and then stops the server. Then
+//     python tools/agent/drive.py run/<node>/agent/server tools/agent/smoke/server-probe.jsonl --verify --max-age 10
+{"id": "probe", "command": "probe", "expect": {"ok": true, "result.side": "server"}}
+{"id": "info", "command": "server.info", "expect": {"ok": true, "result.dedicated": true}}
+{"id": "stats", "command": "server.command", "args": {"command": "civillagers debug stats"}, "expect": {"ok": true}}
+{"id": "villages", "command": "server.villages", "expect": {"ok": true}}
+{"id": "guards", "command": "server.guards", "expect": {"ok": true}}

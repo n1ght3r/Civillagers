@@ -6,11 +6,18 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.level.ItemLike;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
@@ -25,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Every call into the mod loader, for NeoForge. The counterpart of the Fabric class of the same name;
@@ -73,6 +81,23 @@ public final class Loader {
             listening = true;
         }
         PENDING.computeIfAbsent(registry, key -> new ArrayList<>()).add(registration);
+    }
+
+    /**
+     * Gives {@code type} its attributes: health, speed, damage and the rest a living entity reads. Called
+     * after the type's own {@link #onRegister}, with suppliers, because NeoForge only has the type once its
+     * registration event has run.
+     */
+    public static void registerAttributes(Supplier<? extends EntityType<? extends LivingEntity>> type,
+                                          Supplier<AttributeSupplier.Builder> attributes) {
+        modBus().addListener((EntityAttributeCreationEvent event) -> event.put(type.get(), attributes.get().build()));
+    }
+
+    /** Lists {@code item} in the creative inventory tab {@code tab}, at its end. */
+    public static void addToCreativeTab(ResourceKey<CreativeModeTab> tab, Supplier<? extends ItemLike> item) {
+        modBus().addListener((BuildCreativeModeTabContentsEvent event) -> {
+            if (event.getTabKey() == tab) event.accept(item.get());
+        });
     }
 
     /** Runs {@code action} once a server has finished starting and its levels are loaded. */

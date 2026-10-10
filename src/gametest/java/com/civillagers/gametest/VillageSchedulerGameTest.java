@@ -1,6 +1,8 @@
 package com.civillagers.gametest;
 
 import com.civillagers.Civillagers;
+import com.civillagers.ai.GuardPathBudget;
+import com.civillagers.entity.GuardStats;
 import com.civillagers.village.Village;
 import com.civillagers.village.VillageScheduler;
 import com.civillagers.village.VillageStats;
@@ -100,10 +102,15 @@ public final class VillageSchedulerGameTest {
     @GameTest
     public void stoppingTheServerClearsEveryCache(GameTestHelper helper) {
         VillageStats.recordTick(1000L, 1);
+        GuardStats.recordScan();
+        GuardStats.endTick();
+        for (int i = 0; i <= GuardPathBudget.PER_TICK; i++) GuardPathBudget.tryTake(Long.MAX_VALUE);
         TestFixtures.check(helper, Civillagers.cachedEntries() > 0, "a recorded tick is cached");
         Civillagers.clearCaches();
         TestFixtures.check(helper, Civillagers.cachedEntries() == 0, "clearing leaves nothing behind");
         TestFixtures.check(helper, VillageStats.updates() == 0 && VillageStats.maxMillis() == 0, "every counter is reset");
+        TestFixtures.check(helper, GuardStats.scans() == 0 && GuardStats.samples() == 0 && GuardPathBudget.refused() == 0,
+                "the guard counters are reset too");
         helper.succeed();
     }
 }
