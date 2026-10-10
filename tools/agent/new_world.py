@@ -28,6 +28,8 @@ What it drops or changes either way, and why:
 - **Time and weather** are frozen at noon and clear, so a capture looks the same every run.
 - **Mobs, patrols, traders and phantoms** do not spawn, so nothing attacks the player mid script.
 - **The spawn radius** is 0, so the player stands on the spawn point itself.
+- **Cheats are on** (`allowCommands`), so a person can open the world after a run and test in it with
+  commands, and a script's `client.command` runs with the player's own permission.
 
 `--datapack` copies a data pack folder into the world's datapacks, for a script that needs one.
 
@@ -109,6 +111,7 @@ def main():
     level, name = nbt.load(source / "level.dat")
     data = level["Data"]
     data["LevelName"] = nbt.string(args.world)
+    data["allowCommands"] = nbt.byte(1)
     if "GameRules" in data:
         fresh_legacy(data)
     if not args.terrain:

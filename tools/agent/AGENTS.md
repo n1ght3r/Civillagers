@@ -8,7 +8,7 @@ Every path is relative to the repository root; each script's header says how to 
 | File | What |
 |---|---|
 | `drive.py` | Sends a file or standard input to a queue, waits for the answers, and `--verify`s a finished run |
-| `new_world.py`, `nbt.py` | Makes a throwaway world for a script: a sky floor at y 199 by default, noon, clear, no mob spawning; `--terrain` for real ground |
+| `new_world.py`, `nbt.py` | Makes a throwaway world for a script: a sky floor at y 199 by default, noon, clear, no mob spawning, cheats on so a person can open it and test with commands; `--terrain` for real ground |
 | `clean.py` | Deletes the throwaway worlds `new_world.py` made |
 | `smoke/server-probe.jsonl` | A dedicated server's queue answers with nobody online |
 | `smoke/boot.jsonl` | A driven client comes up, opens its world and never takes the mouse |
