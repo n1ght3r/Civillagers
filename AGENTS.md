@@ -23,6 +23,7 @@ The Fabric `1.21.1` jar also covers 1.21; the NeoForge one does not.
 | `./gradlew ":<node>:runDatagen"` | Regenerate JSON into `src/main/generated/<mc version>/` (Fabric nodes only) |
 | `./gradlew ":<node>:ci"` | **Exactly what CI runs on that node**: the jar, every check, the gametests |
 | `./gradlew -p build-logic test` | build-logic's own tests |
+| `python .github/scripts/update_mc_deps.py --dry-run` | What the daily dependency bump would change in `stonecutter.properties.toml` (`.github/workflows/update-mc-deps.yml` opens the PR) |
 
 - **Never hand-edit `src/main/generated/`.** Change the generator in `src/datagen`. The NeoForge node
   reads the Fabric output of the same Minecraft version; `checkNeoForgeResources` fails if a Fabric-only
@@ -61,6 +62,23 @@ The Fabric `1.21.1` jar also covers 1.21; the NeoForge one does not.
 - **Lang**: every key in `en_us.json` is in every other lang file (`vi_vn.json` today); `checkLang`
   fails otherwise.
 
+## Performance and memory
+
+Hard requirements, not later polish. The full rules and the per-feature budgets are in
+[docs/ROADMAP.md](docs/ROADMAP.md), section 1; a feature is not done until `runBenchmark` shows it within
+its budget.
+
+- **No world state in statics.** Village data lives in per-level `SavedData`. Store entity `UUID`s, never
+  `Entity`, `Level`, `ServerPlayer` or chunk references in anything that outlives a tick.
+- **Every cache has a clear.** A new cache gets its clear in `Loader.onServerStopped` (client: on
+  disconnect) in the same change. No unbounded lists: cap them or use a ring buffer.
+- **Tick sparsely, within a budget.** Village logic runs through `VillageScheduler`: staggered intervals
+  and a per-tick time budget. World scans and path recomputation are rate-limited, never every tick.
+- **No chunk force-loading.** Work only in loaded chunks and resume when they load again.
+- **Main thread only for world access.** Off-thread work is pure computation on snapshots.
+- **No allocation in hot paths.** Reuse `MutableBlockPos`, prefer fastutil collections, no streams or
+  capturing lambdas in per-tick loops. Sync to clients on change, to those who need it, rate-limited.
+
 ## Where things go
 
 | Package | What |
@@ -75,6 +93,7 @@ The Fabric `1.21.1` jar also covers 1.21; the NeoForge one does not.
 
 ## Where to look
 
+- [docs/ROADMAP.md](docs/ROADMAP.md): the phases, and the performance and memory rules with budgets.
 - [src/main/java/com/civillagers/platform/AGENTS.md](src/main/java/com/civillagers/platform/AGENTS.md): the loader and version seams.
 - [src/gametest/java/AGENTS.md](src/gametest/java/AGENTS.md): writing and running gametests.
 - [src/datagen/java/AGENTS.md](src/datagen/java/AGENTS.md): generated resources.
@@ -82,4 +101,4 @@ The Fabric `1.21.1` jar also covers 1.21; the NeoForge one does not.
 ## Commits
 
 Conventional prefixes: `feat:`, `fix:`, `build:`, `docs:`, `test:`, `chore:`. Before pushing, run
-`./gradlew ":<node>:ci"` on every node the change touches.
+`./gradlew ":<node>:ci"` on every node the change touches. No `Co-Authored-By` trailers for AI tools.

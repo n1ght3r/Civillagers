@@ -28,6 +28,19 @@ def suffix(loader: str) -> str:
     return "" if loader == FABRIC else f"-{loader}"
 
 
+def loader_of(node: str) -> str:
+    """The mod loader a node builds for: `neoforge` for `1.21.1-neoforge`, `fabric` for `26.3.x`."""
+    for loader in LOADERS:
+        if loader != FABRIC and node.endswith(suffix(loader)):
+            return loader
+    return FABRIC
+
+
+def minecraft_of(node: str) -> str:
+    """The node's name without its loader: `1.21.1` for `1.21.1-neoforge`. It names the shared table."""
+    return node.removesuffix(suffix(loader_of(node)))
+
+
 def nodes(path: Path = PROPERTIES) -> list[dict[str, str]]:
     """Every node with a loader table in stonecutter.properties.toml, in file order.
 

@@ -1,0 +1,66 @@
+name: Update Minecraft dependencies
+
+# Dependabot keeps the Gradle plugins, the wrapper and the actions current, but not the dependencies in
+# stonecutter.properties.toml: it does not read that file, and it would not know that each node needs the
+# build made for its own Minecraft version. .github/scripts/update_mc_deps.py asks Modrinth, Fabric's meta
+# API and NeoForge's Maven per node instead, and this opens one pull request with whatever it found.
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  # Dispatching the build for the pull request; see the last step.
+  actions: write
+
+concurrency:
+  group: update-mc-deps
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update dependencies
+    runs-on: ubuntu-latest
+    env:
+      # Optional. A fine-grained token with contents and pull request write access. Pull requests opened
+      # with the default token do not start other workflows, so without one the build is dispatched by
+      # hand below, and shows under Actions rather than as a check on the pull request.
+      HAS_UPDATE_TOKEN: ${{ secrets.DEPS_UPDATE_TOKEN != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Look up newer versions
+        run: python .github/scripts/update_mc_deps.py --summary "$RUNNER_TEMP/deps-summary.md"
+
+      - name: Open or update the pull request
+        id: pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.DEPS_UPDATE_TOKEN || github.token }}
+          # One standing branch. A later run rewrites it, and it is deleted once nothing is left to bump.
+          branch: automation/minecraft-deps
+          delete-branch: true
+          add-paths: stonecutter.properties.toml
+          commit-message: "chore: update Minecraft dependencies"
+          title: "chore: update Minecraft dependencies"
+          body-path: ${{ runner.temp }}/deps-summary.md
+          labels: dependencies
+          assignees: n1ght3r
+
+      - name: Build the pull request
+        if: >-
+          env.HAS_UPDATE_TOKEN != 'true' &&
+          (steps.pr.outputs.pull-request-operation == 'created' || steps.pr.outputs.pull-request-operation == 'updated')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # workflow_dispatch is the one event the default token is still allowed to start.
+        run: gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref automation/minecraft-deps
