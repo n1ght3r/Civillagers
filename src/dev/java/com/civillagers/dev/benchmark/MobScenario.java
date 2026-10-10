@@ -18,8 +18,10 @@ import java.util.function.Supplier;
 
 /**
  * What {@code count} mobs of one kind cost, in real server ticks, standing around a bell in the middle of
- * the area at noon: guards on patrol, guards in combat, or, for comparison, vanilla villagers or iron
- * golems in the same spot.
+ * the area at noon: guards on patrol, guards in combat, guards with nobody near, or, for comparison,
+ * vanilla villagers or iron golems in the same spot. Nobody joins a benchmark, so the patrol and combat
+ * scenarios tell every guard a player is near ({@link PlayerPresence}): they measure a guard someone
+ * watches, and the third one the idle guard.
  *
  * <p>Every kind is timed from the outside by {@link EntityTickTimer}, around each entity's whole tick:
  * its AI, its pathfinding and the movement and collision vanilla does for any mob. Guards are also timed
@@ -29,23 +31,27 @@ import java.util.function.Supplier;
  */
 final class MobScenario implements Stage {
     enum Kind {
-        GUARDS_PATROL("guards on patrol", CivEntities::guard, false),
-        GUARDS_COMBAT("guards in combat", CivEntities::guard, true),
-        VILLAGERS("vanilla villagers", DevVanilla::villager, false),
-        IRON_GOLEMS("vanilla iron golems", DevVanilla::ironGolem, false);
+        GUARDS_PATROL("guards on patrol", CivEntities::guard, false, true),
+        GUARDS_COMBAT("guards in combat", CivEntities::guard, true, true),
+        GUARDS_IDLE("guards, nobody near", CivEntities::guard, false, false),
+        VILLAGERS("vanilla villagers", DevVanilla::villager, false, null),
+        IRON_GOLEMS("vanilla iron golems", DevVanilla::ironGolem, false, null);
 
         final String label;
         final Supplier<? extends EntityType<? extends Mob>> type;
         final boolean combat;
+        /** Whether guards are told a player is near; null for vanilla mobs, which never ask. */
+        final Boolean playerNear;
 
-        Kind(String label, Supplier<? extends EntityType<? extends Mob>> type, boolean combat) {
+        Kind(String label, Supplier<? extends EntityType<? extends Mob>> type, boolean combat, Boolean playerNear) {
             this.label = label;
             this.type = type;
             this.combat = combat;
+            this.playerNear = playerNear;
         }
 
         boolean guards() {
-            return this == GUARDS_PATROL || this == GUARDS_COMBAT;
+            return playerNear != null;
         }
     }
 
@@ -126,6 +132,7 @@ final class MobScenario implements Stage {
         center = world.center();
         world.place(center, Blocks.BELL.defaultBlockState());
         world.addLevelAnchor(center);
+        PlayerPresence.force(kind.playerNear);
         EntityType<? extends Mob> type = kind.type.get();
         EntityTickTimer.watch(type);
         for (int i = 0; i < count; i++) {
@@ -155,6 +162,7 @@ final class MobScenario implements Stage {
 
     private void finish() {
         EntityTickTimer.watch(null);
+        PlayerPresence.force(null);
         int alive = 0;
         for (Mob mob : mobs) if (mob.isAlive()) alive++;
         // A mob that did not tick is not being measured: the scenario says so rather than look cheap.
@@ -165,6 +173,7 @@ final class MobScenario implements Stage {
         json.addProperty("kind", kind.name().toLowerCase(java.util.Locale.ROOT));
         json.addProperty("mobs", count);
         json.addProperty("combat", kind.combat);
+        if (kind.guards()) json.addProperty("playerNear", kind.playerNear);
         json.addProperty("measuredTicks", outside.size());
         json.add("msPerTick", outside.summary(1_000_000.0));
         json.addProperty("microsPerMobPerTick", entityTicks == 0 ? 0.0 : Metrics.round(outside.sum() / 1000.0 / entityTicks));

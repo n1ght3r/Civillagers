@@ -1,6 +1,9 @@
 package com.civillagers.gametest;
 
+import com.civillagers.ai.GuardCombatPath;
+import com.civillagers.ai.GuardEnemies;
 import com.civillagers.ai.GuardPatrolGoal;
+import com.civillagers.ai.GuardShieldGoal;
 import com.civillagers.ai.GuardSleepGoal;
 import com.civillagers.ai.GuardTargetGoal;
 import com.civillagers.entity.CivEntities;
@@ -10,11 +13,14 @@ import com.civillagers.village.Villages;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -22,7 +28,10 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-/** Guards: their gear, how often they look for targets, combat, patrol points and beds. */
+/**
+ * Guards: their gear, how often they look for targets, combat, patrol points and beds, idling with nobody
+ * near, path searches in a fight, the shield, the crossbow, and the mobs that hunt them.
+ */
 public final class GuardGameTest {
     private static final BlockPos GUARD = new BlockPos(1, 2, 1);
 
@@ -83,22 +92,182 @@ public final class GuardGameTest {
         TestFixtures.floor(helper, 1);
         Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
         GuardTargetGoal goal = new GuardTargetGoal(guard);
+        // The test world has no player, so the guard idles and looks less often.
         int start = guard.tickCount;
+        checkScanRate(helper, guard, goal, start, GuardTargetGoal.IDLE_SCAN_INTERVAL, "with nobody near");
+        ServerPlayer player = TestFixtures.playerAt(helper, guard);
+        try {
+            // Far enough on that the guard looks for players again.
+            checkScanRate(helper, guard, goal, start + 400, GuardTargetGoal.SCAN_INTERVAL, "with a player near");
+        } finally {
+            TestFixtures.removePlayer(helper, player);
+        }
+        helper.succeed();
+    }
+
+    /** Runs {@code goal} over 200 ticks from {@code start} and checks it scanned about once every {@code interval}. */
+    private static void checkScanRate(GameTestHelper helper, Guard guard, GuardTargetGoal goal, int start, int interval, String when) {
         int ticks = 200;
-        int lastScan = -GuardTargetGoal.SCAN_INTERVAL;
+        int first = goal.scans();
+        int lastScan = -interval;
         for (int t = 0; t < ticks; t++) {
             guard.tickCount = start + t;
             int before = goal.scans();
             goal.canUse();
             if (goal.scans() == before) continue;
-            TestFixtures.check(helper, t - lastScan >= GuardTargetGoal.SCAN_INTERVAL,
-                    "two scans " + (t - lastScan) + " ticks apart, under " + GuardTargetGoal.SCAN_INTERVAL);
+            TestFixtures.check(helper, t - lastScan >= interval,
+                    "two scans " + (t - lastScan) + " ticks apart " + when + ", under " + interval);
             lastScan = t;
         }
-        int scans = goal.scans();
-        TestFixtures.check(helper, scans <= ticks / GuardTargetGoal.SCAN_INTERVAL + 1, scans + " scans in " + ticks + " ticks is too many");
-        TestFixtures.check(helper, scans >= ticks / (2 * GuardTargetGoal.SCAN_INTERVAL), "a guard still looks around: " + scans + " scans");
+        int scans = goal.scans() - first;
+        TestFixtures.check(helper, scans <= ticks / interval + 1, scans + " scans in " + ticks + " ticks " + when + " is too many");
+        TestFixtures.check(helper, scans >= ticks / (2 * interval), "a guard still looks around " + when + ": " + scans + " scans");
+    }
+
+    @GameTest
+    public void aGuardIdlesWithNobodyNear(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        BlockPos bell = helper.absolutePos(new BlockPos(4, 2, 4));
+        helper.setBlock(new BlockPos(4, 2, 4), Blocks.BELL);
+        Villages villages = Villages.get(helper.getLevel());
+        Village village = villages.addAnchor(bell, 0L);
+        try {
+            Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+            GuardPatrolGoal patrol = new GuardPatrolGoal(guard);
+            guard.tickCount += 1000;
+            TestFixtures.check(helper, !guard.playerNear(), "the test world has no player");
+            for (int i = 0; i < 20; i++) {
+                TestFixtures.check(helper, !patrol.canUse(), "a guard nobody sees stands at its post");
+                guard.tickCount += 40;
+            }
+            ServerPlayer player = TestFixtures.playerAt(helper, guard);
+            try {
+                guard.tickCount += 100;
+                TestFixtures.check(helper, guard.playerNear(), "a player beside the guard is near");
+            } finally {
+                TestFixtures.removePlayer(helper, player);
+            }
+        } finally {
+            villages.removeAnchor(village, bell.asLong(), 0L);
+        }
         helper.succeed();
+    }
+
+    @GameTest
+    public void aFightingGuardSearchesOnlyWhenItsTargetMoves(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        // A mob that has not ticked yet has not landed, and a mob in the air finds no path.
+        guard.setOnGround(true);
+        Mob zombie = helper.spawnWithNoFreeWill(TestFixtures.zombie(), new BlockPos(6, 2, 1));
+        GuardCombatPath path = new GuardCombatPath(guard);
+        TestFixtures.check(helper, path.follow(zombie, 0.75), "the first step of a fight searches a path");
+        int calls = 3 * GuardCombatPath.MIN_INTERVAL;
+        for (int i = 0; i < calls; i++) path.follow(zombie, 0.75);
+        TestFixtures.check(helper, path.searches() == 1, "a target standing still needs no new path, not " + path.searches());
+
+        zombie.setPos(zombie.getX(), zombie.getY(), zombie.getZ() + 1.0);
+        for (int i = 0; i < calls; i++) path.follow(zombie, 0.75);
+        TestFixtures.check(helper, path.searches() == 1, "a step of one block needs none either, not " + path.searches());
+
+        zombie.setPos(zombie.getX(), zombie.getY(), zombie.getZ() + 3.0);
+        for (int i = 0; i < calls; i++) path.follow(zombie, 0.75);
+        TestFixtures.check(helper, path.searches() == 2, "a target that moved " + (int) (GuardCombatPath.MOVED + 2)
+                + " blocks gets one new path, not " + (path.searches() - 1));
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aGuardRaisesItsShieldAgainstArchersAndCreepers(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        guard.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
+        GuardShieldGoal goal = new GuardShieldGoal(guard);
+        TestFixtures.check(helper, !goal.canUse(), "nothing calls for the shield yet");
+
+        Mob skeleton = helper.spawnWithNoFreeWill(TestFixtures.skeleton(), new BlockPos(6, 2, 1));
+        skeleton.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+        guard.setTarget(skeleton);
+        TestFixtures.check(helper, goal.canUse(), "an archer out of reach calls for the shield");
+        goal.start();
+        TestFixtures.check(helper, guard.isUsingItem() && guard.getUsedItemHand() == InteractionHand.OFF_HAND,
+                "the guard raises the shield in its off hand");
+        skeleton.setPos(guard.getX() + 1.0, guard.getY(), guard.getZ());
+        TestFixtures.check(helper, !goal.canContinueToUse(), "within reach the shield comes down, so the guard can strike");
+        goal.stop();
+        TestFixtures.check(helper, !guard.isUsingItem(), "and the guard has lowered it");
+        guard.setTarget(null);
+        skeleton.discard();
+
+        Creeper creeper = (Creeper) helper.spawnWithNoFreeWill(TestFixtures.creeper(), new BlockPos(4, 2, 1));
+        try {
+            guard.tickCount += GuardShieldGoal.CREEPER_CHECK_INTERVAL;
+            TestFixtures.check(helper, !goal.canUse(), "a calm creeper calls for nothing");
+            creeper.setSwellDir(1);
+            guard.tickCount += GuardShieldGoal.CREEPER_CHECK_INTERVAL;
+            TestFixtures.check(helper, goal.canUse(), "a creeper about to blow up calls for the shield");
+            guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
+            TestFixtures.check(helper, !goal.canUse(), "a guard with a bow keeps its hands for the bow");
+        } finally {
+            // Before it ticks and goes off.
+            creeper.discard();
+        }
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aGuardTakesACrossbowAndGivesItBackUnloaded(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        ItemStack loaded = TestFixtures.loadedCrossbow();
+        TestFixtures.check(helper, guard.gearSlot(loaded) == EquipmentSlot.MAINHAND, "a crossbow is a weapon");
+        guard.equipGear(loaded);
+        TestFixtures.check(helper, guard.holdsCrossbow() && guard.holdsRangedWeapon(), "the guard holds a crossbow");
+        TestFixtures.check(helper, guard.getProjectile(guard.getMainHandItem()).is(Items.ARROW), "and needs no arrows of its own");
+        ItemStack back = guard.takeGear();
+        TestFixtures.check(helper, back.is(Items.CROSSBOW) && !CrossbowItem.isCharged(back), "the crossbow comes back unloaded");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aGuardShootsALoadedCrossbow(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawn(CivEntities.guard(), GUARD);
+        guard.setItemSlot(EquipmentSlot.MAINHAND, TestFixtures.loadedCrossbow());
+        Mob zombie = helper.spawnWithNoFreeWill(TestFixtures.zombie(), new BlockPos(6, 2, 6));
+        // A helmet keeps the zombie from burning before the guard shoots.
+        zombie.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.LEATHER_HELMET));
+        guard.setTarget(zombie);
+        helper.succeedWhen(() -> TestFixtures.check(helper, !CrossbowItem.isCharged(guard.getMainHandItem()),
+                "the guard should shoot the bolt in its crossbow"));
+    }
+
+    @GameTest
+    public void zombiesAndRaidersHuntGuards(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        TestFixtures.check(helper, !GuardEnemies.huntsGuards(helper.spawnWithNoFreeWill(TestFixtures.zombifiedPiglin(), new BlockPos(7, 2, 7))),
+                "zombified piglins are neutral and leave guards alone");
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), new BlockPos(4, 2, 4));
+        // A target goal looks on a random tick, so several of each make the test certain within its time.
+        Mob[] zombies = new Mob[4];
+        Mob[] vindicators = new Mob[4];
+        for (int i = 0; i < 4; i++) {
+            zombies[i] = helper.spawn(TestFixtures.zombie(), new BlockPos(1 + 2 * i, 2, 1));
+            zombies[i].setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.LEATHER_HELMET));
+            vindicators[i] = helper.spawn(TestFixtures.vindicator(), new BlockPos(1 + 2 * i, 2, 6));
+        }
+        TestFixtures.check(helper, GuardEnemies.huntsGuards(zombies[0]) && GuardEnemies.huntsGuards(vindicators[0]),
+                "zombies and illagers hunt guards");
+        helper.succeedWhen(() -> {
+            TestFixtures.check(helper, targets(zombies, guard), "a zombie should go after the guard");
+            TestFixtures.check(helper, targets(vindicators, guard), "a vindicator should go after the guard");
+        });
+    }
+
+    private static boolean targets(Mob[] mobs, Guard guard) {
+        for (Mob mob : mobs) if (mob.getTarget() == guard) return true;
+        return false;
     }
 
     @GameTest

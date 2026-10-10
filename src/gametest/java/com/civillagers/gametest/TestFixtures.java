@@ -2,12 +2,16 @@ package com.civillagers.gametest;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.ChargedProjectiles;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -56,6 +60,41 @@ final class TestFixtures {
         //return EntityType.CREEPER;
     }
 
+    /** The skeleton's entity type; see {@link #zombie()}. */
+    static EntityType<? extends Mob> skeleton() {
+        //? if >=26.2 {
+        return net.minecraft.world.entity.EntityTypes.SKELETON;
+        //?} else
+        //return EntityType.SKELETON;
+    }
+
+    /** The vindicator's entity type; see {@link #zombie()}. */
+    static EntityType<? extends Mob> vindicator() {
+        //? if >=26.2 {
+        return net.minecraft.world.entity.EntityTypes.VINDICATOR;
+        //?} else
+        //return EntityType.VINDICATOR;
+    }
+
+    /** The zombified piglin's entity type; see {@link #zombie()}. */
+    static EntityType<? extends Mob> zombifiedPiglin() {
+        //? if >=26.2 {
+        return net.minecraft.world.entity.EntityTypes.ZOMBIFIED_PIGLIN;
+        //?} else
+        //return EntityType.ZOMBIFIED_PIGLIN;
+    }
+
+    /** A crossbow loaded with one arrow. After 1.21.1, loaded projectiles are built from a list by another name. */
+    static ItemStack loadedCrossbow() {
+        ItemStack crossbow = new ItemStack(Items.CROSSBOW);
+        java.util.List<ItemStack> arrow = java.util.List.of(new ItemStack(Items.ARROW));
+        //? if >1.21.1 {
+        crossbow.set(DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.ofNonEmpty(arrow));
+        //?} else
+        //crossbow.set(DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.of(arrow));
+        return crossbow;
+    }
+
     /** Lays a stone floor across the test's 8x8 patch at {@code y}, so mobs stand at {@code y + 1}. */
     static void floor(GameTestHelper helper, int y) {
         for (int x = 0; x < 8; x++) {
@@ -71,6 +110,20 @@ final class TestFixtures {
         helper.setBlock(foot.north(), bed.setValue(net.minecraft.world.level.block.BedBlock.PART, BedPart.HEAD));
         helper.setBlock(foot, bed.setValue(net.minecraft.world.level.block.BedBlock.PART, BedPart.FOOT));
         return foot.north();
+    }
+
+    /**
+     * A mock player in the level, standing where {@code entity} stands: guards count it as a player near.
+     * Take it out again with {@link #removePlayer} in the same test, before anything else ticks.
+     */
+    static net.minecraft.server.level.ServerPlayer playerAt(GameTestHelper helper, net.minecraft.world.entity.Entity entity) {
+        net.minecraft.server.level.ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setPos(entity.getX(), entity.getY(), entity.getZ());
+        return player;
+    }
+
+    static void removePlayer(GameTestHelper helper, net.minecraft.server.level.ServerPlayer player) {
+        helper.getLevel().getServer().getPlayerList().remove(player);
     }
 
     /** A player using {@code hand} on {@code mob}. By 26.1 an interaction also carries where the mob was hit. */

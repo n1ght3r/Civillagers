@@ -18,7 +18,8 @@ import java.util.EnumSet;
  *
  * <p>A point is chosen from the heightmap, never by scanning blocks, and only in a loaded chunk. Starting
  * the walk is one path search, taken from {@link GuardPathBudget}; after that vanilla's navigation
- * follows the path and only searches again when it is stuck.
+ * follows the path and only searches again when it is stuck. With no player near
+ * ({@link Guard#playerNear()}) a guard stays where it is: walking is most of what a guard costs.
  */
 public final class GuardPatrolGoal extends Goal {
     static final double SPEED = 0.5;
@@ -52,6 +53,8 @@ public final class GuardPatrolGoal extends Goal {
         ServerLevel level = guard.serverLevel();
         if (level == null) return false;
         nextWalk = guard.tickCount + RETRY;
+        // A patrol is for players to see: with nobody near, the guard stands at its post.
+        if (!guard.playerNear()) return false;
         if (!pickPoint(level, guard, guard.getRandom(), point)) return false;
         if (!GuardPathBudget.tryTake(level.getGameTime())) return false;
         if (!guard.getNavigation().moveTo(point.getX() + 0.5, point.getY(), point.getZ() + 0.5, SPEED)) return false;

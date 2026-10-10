@@ -11,11 +11,15 @@ import java.util.EnumSet;
  * Picks the nearest hostile mob a guard can see as its target. Looking is a box query plus a ray cast, so
  * a guard looks at most once every {@link #SCAN_INTERVAL} ticks, with a little jitter so guards spawned
  * together do not all look on the same tick. Vanilla's {@code NearestAttackableTargetGoal} looks on a
- * random tick instead, which averages the same rate but can look twice in a row.
+ * random tick instead, which averages the same rate but can look twice in a row. With no player near
+ * ({@link Guard#playerNear()}) a guard looks every {@link #IDLE_SCAN_INTERVAL} ticks instead: what
+ * nobody sees can wait a little, and whatever hurts the guard still turns it at once.
  */
 public final class GuardTargetGoal extends TargetGoal {
     /** The fewest ticks between two scans by one guard. */
     public static final int SCAN_INTERVAL = 10;
+    /** The fewest ticks between two scans by a guard with no player near. */
+    public static final int IDLE_SCAN_INTERVAL = 40;
     /** Up to this many ticks are added to each wait, so guards drift apart. */
     private static final int SCAN_JITTER = 5;
 
@@ -36,7 +40,8 @@ public final class GuardTargetGoal extends TargetGoal {
     @Override
     public boolean canUse() {
         if (guard.getTarget() != null || guard.tickCount < nextScan) return false;
-        nextScan = guard.tickCount + SCAN_INTERVAL + guard.getRandom().nextInt(SCAN_JITTER + 1);
+        int interval = guard.playerNear() ? SCAN_INTERVAL : IDLE_SCAN_INTERVAL;
+        nextScan = guard.tickCount + interval + guard.getRandom().nextInt(SCAN_JITTER + 1);
         GuardStats.recordScan();
         scans++;
         found = guard.findThreat();

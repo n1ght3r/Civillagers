@@ -3,6 +3,7 @@
   "package": "com.civillagers.dev.mixin",
   "compatibilityLevel": "${java}",
   "mixins": [
+    "GuardMixin",
     "ServerLevelMixin"
   ],
   "client": [
