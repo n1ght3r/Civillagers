@@ -51,7 +51,8 @@ public final class Civillagers {
     /** Entries held by the caches {@link #clearCaches()} empties; 0 right after it. */
     public static int cachedEntries() {
         return VillageStats.samples() + GuardStats.samples() + (GuardStats.scans() > 0 ? 1 : 0)
-                + (GuardPathBudget.refused() > 0 ? 1 : 0) + StockpileKeys.size();
+                + (GuardPathBudget.refused() > 0 ? 1 : 0) + (GuardPathBudget.combatRefused() > 0 ? 1 : 0)
+                + StockpileKeys.size();
     }
 
     /** An id in the mod's namespace. */

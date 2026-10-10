@@ -69,7 +69,7 @@ public final class CivillagersCommands {
                 Tick: mean %.4f ms, max %.4f ms over the last %d ticks (budget %.2f ms, at most %d updates per tick)
                 Since start: %d village updates, %d discovery scans
                 Guards: %d ticking, mean %.4f ms, max %.4f ms per tick for all of them; %.3f target scans per guard per %d ticks
-                Guard paths: at most %d new walks per tick, %d deferred since start
+                Guard paths: at most %d new walks and %d chases per tick; %d walks and %d chases deferred since start
                 Caches: %d runtime lookup entries across levels, stats window %d""",
                 villages, levels, loaded,
                 VillageStats.meanMillis(), VillageStats.maxMillis(), VillageStats.samples(),
@@ -79,7 +79,8 @@ public final class CivillagersCommands {
                 GuardStats.guardTicks() == 0 ? 0.0
                         : GuardStats.scans() * (double) GuardTargetGoal.SCAN_INTERVAL / GuardStats.guardTicks(),
                 GuardTargetGoal.SCAN_INTERVAL,
-                GuardPathBudget.PER_TICK, GuardPathBudget.refused(),
+                GuardPathBudget.PER_TICK, GuardPathBudget.COMBAT_PER_TICK,
+                GuardPathBudget.refused(), GuardPathBudget.combatRefused(),
                 lookups, VillageStats.WINDOW);
         source.sendSuccess(() -> Component.literal(text), false);
         return villages;

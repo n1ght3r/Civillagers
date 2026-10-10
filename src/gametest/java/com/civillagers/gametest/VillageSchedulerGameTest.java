@@ -105,11 +105,13 @@ public final class VillageSchedulerGameTest {
         GuardStats.recordScan();
         GuardStats.endTick();
         for (int i = 0; i <= GuardPathBudget.PER_TICK; i++) GuardPathBudget.tryTake(Long.MAX_VALUE);
+        for (int i = 0; i <= GuardPathBudget.COMBAT_PER_TICK; i++) GuardPathBudget.tryTakeCombat(Long.MAX_VALUE);
         TestFixtures.check(helper, Civillagers.cachedEntries() > 0, "a recorded tick is cached");
         Civillagers.clearCaches();
         TestFixtures.check(helper, Civillagers.cachedEntries() == 0, "clearing leaves nothing behind");
         TestFixtures.check(helper, VillageStats.updates() == 0 && VillageStats.maxMillis() == 0, "every counter is reset");
-        TestFixtures.check(helper, GuardStats.scans() == 0 && GuardStats.samples() == 0 && GuardPathBudget.refused() == 0,
+        TestFixtures.check(helper, GuardStats.scans() == 0 && GuardStats.samples() == 0 && GuardPathBudget.refused() == 0
+                        && GuardPathBudget.combatRefused() == 0,
                 "the guard counters are reset too");
         helper.succeed();
     }

@@ -16,7 +16,8 @@ import java.util.EnumSet;
 /**
  * Shoots the target with the bow in the main hand: keeps within range, draws, looses, waits, the way a
  * skeleton does. Vanilla's {@code RangedBowAttackGoal} only takes monsters, so this is its logic for a
- * guard. A guard needs no arrows; a mob's arrows cannot be picked up.
+ * guard. A guard needs no arrows; a mob's arrows cannot be picked up. While the target is out of range or
+ * out of sight, the guard closes in through {@link GuardCombatPath}.
  */
 public final class GuardBowGoal extends Goal {
     private static final double SPEED = 0.6;
@@ -26,16 +27,15 @@ public final class GuardBowGoal extends Goal {
     private static final int COOLDOWN = 20;
     /** Ticks of drawing before a shot: a full draw. */
     private static final int DRAW = 20;
-    /** Ticks between two path requests while the target is out of range or out of sight. */
-    private static final int REPATH = 10;
 
     private final Guard guard;
+    private final GuardCombatPath path;
     private int attackTime = -1;
     private int seeTime;
-    private int repath;
 
     public GuardBowGoal(Guard guard) {
         this.guard = guard;
+        this.path = new GuardCombatPath(guard);
         setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
     }
 
@@ -48,6 +48,7 @@ public final class GuardBowGoal extends Goal {
     @Override
     public void start() {
         guard.setAggressive(true);
+        path.reset();
     }
 
     @Override
@@ -55,7 +56,6 @@ public final class GuardBowGoal extends Goal {
         guard.setAggressive(false);
         seeTime = 0;
         attackTime = -1;
-        repath = 0;
         guard.stopUsingItem();
     }
 
@@ -75,9 +75,8 @@ public final class GuardBowGoal extends Goal {
 
         if (distance <= RANGE_SQR && seeTime >= 20) {
             guard.getNavigation().stop();
-        } else if (--repath <= 0) {
-            repath = REPATH;
-            guard.getNavigation().moveTo(target, SPEED);
+        } else {
+            path.follow(target, SPEED);
         }
         guard.getLookControl().setLookAt(target, 30.0F, 30.0F);
 
