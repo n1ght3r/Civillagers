@@ -100,7 +100,9 @@ control) rather than a `Brain`.
 like a player's, showing the weapon or shield it holds and the armor it wears. Built on `HumanoidModel`
 with an 8×10×8 head and the robe; `ItemInHandLayer` and `HumanoidArmorLayer`; the helmet stretched over
 the taller head; the robe hidden under leggings; vanilla's villager texture read by path (never copied).
-A guard skin of its own (64×64) can come later, made or licensed for the mod.
+A guard skin of its own (64×64) can come later, made or licensed for the mod. The one exception to "never
+copied": the Guard Spawn Egg's 16×16 texture is vanilla's villager egg with an iron helmet painted over
+the head (option A of five drawn, chosen 2026-10-10); the same file on every version, untinted on 1.21.1.
 
 | Step | What | Check | |
 |---|---|---|---|
@@ -111,6 +113,7 @@ A guard skin of its own (64×64) can come later, made or licensed for the mod.
 | 2.5 | Patrol inside the village, per-tick path budget | `patrolPointsStayInTheVillage` | ✅ |
 | 2.6 | Sleep in a free bed at night; head for a raid | `aGuardFindsAFreeBed` | ✅ |
 | 2.7 | Guards counted per village (`Village.guards`) | `savesAndReloadsEveryField` | ✅ |
+| 2.7b | Spawn egg texture of its own | `tools/agent/shots/guard-egg.jsonl` on every client node | ✅ |
 | 2.8 | Decide the guard budget (see below) | this table | ⬜ |
 | 2.9 | Lighter AI with no player near: no patrol, no idle look, a slower scan, beyond 48 blocks of every player | benchmark scenario "guards, nobody near" | ⬜ |
 | 2.10 | Combat path budget: recompute only when the target moved more than 2 blocks, capped per tick | benchmark "guards in combat" | ⬜ |

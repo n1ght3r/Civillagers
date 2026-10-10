@@ -45,10 +45,12 @@ public final class CivEntities {
                         .sized(0.6F, 1.95F).eyeHeight(1.62F).clientTrackingRange(10), GUARD)));
         Loader.registerAttributes(CivEntities::guard, Guard::createAttributes);
 
-        // Entity types register before items on both loaders, so the type is there for the egg.
+        // Entity types register before items on both loaders, so the type is there for the egg. The egg
+        // has a texture of its own on every version; before 1.21.5 vanilla still multiplies a spawn egg's
+        // colours over it, so both are white there, which leaves the texture as drawn.
         Loader.onRegister(Registries.ITEM, () -> guardSpawnEgg = Registry.register(BuiltInRegistries.ITEM,
                 Civillagers.id(GUARD_SPAWN_EGG),
-                Vanilla.spawnEgg(guard, 0x563C33, 0xC6C6C6, Vanilla.itemProperties(GUARD_SPAWN_EGG))));
+                Vanilla.spawnEgg(guard, 0xFFFFFF, 0xFFFFFF, Vanilla.itemProperties(GUARD_SPAWN_EGG))));
         Loader.addToCreativeTab(CreativeModeTabs.SPAWN_EGGS, CivEntities::guardSpawnEgg);
     }
 }

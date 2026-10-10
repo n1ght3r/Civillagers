@@ -1,6 +1,6 @@
 {
   "model": {
     "type": "minecraft:model",
-    "model": "minecraft:item/villager_spawn_egg"
+    "model": "civillagers:item/guard_spawn_egg"
   }
 }

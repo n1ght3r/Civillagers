@@ -13,6 +13,7 @@ Every path is relative to the repository root; each script's header says how to 
 | `smoke/server-probe.jsonl` | A dedicated server's queue answers with nobody online |
 | `smoke/boot.jsonl` | A driven client comes up, opens its world and never takes the mouse |
 | `shots/guards.jsonl` | Five guards in different gear, captured to `run/<node>/agent/client/screenshots/guards.png` |
+| `shots/guard-egg.jsonl` | The Guard Spawn Egg in hand and in the hotbar beside the villager's, captured to `guard-egg.png` |
 
 `new_world.py` takes its settings from another world of the node (`--from <world>`, or the first one in
 `run/<node>/saves`), so a node needs one world there first: open one with `runClient`, or copy the
