@@ -5,7 +5,9 @@ A villager civilization mod for **Minecraft 26.3, 26.2 and 1.21.1** on **Fabric*
 
 - Mod id and resource namespace: `civillagers`. Java package: `com.civillagers`.
 - The build layout follows ThirstWasTaken2 (`../ThirstWasTaken2`), trimmed to what this mod needs.
-- Every area below has its own `AGENTS.md`; read it before changing that area.
+- Every area below has its own `AGENTS.md`; read it before changing that area. Each has a `CLAUDE.md`
+  beside it that only imports it (`@AGENTS.md`), so Claude Code loads it too: edit `AGENTS.md`, and give
+  a new one its `CLAUDE.md`.
 
 ## Build and run
 
@@ -93,15 +95,18 @@ its budget.
 | `com.civillagers` | `Civillagers`, the mod's entry point, called by each loader's entrypoint |
 | `com.civillagers.village` | The village as saved data: members, chief, stockpile, level, plans |
 | `com.civillagers.command` | `/civillagers`: `debug stats`, `debug here`, `debug scan` (`benchmark` comes from `src/dev`) |
-| `com.civillagers.entity` | `CivEntities` (registration) and the `Guard`; later the village chief and builder |
+| `com.civillagers.entity` | `CivEntities` (registration), the `Guard` and `ZombieGuards`; later the village chief and builder |
 | `com.civillagers.ai` | Goals: the guard's patrol, sleep, raid defence, target scan, melee, bow, crossbow and shield, its budgeted paths, and the vanilla mobs that hunt guards; later the chief's decisions |
 | `com.civillagers.building` | Structure templates, build plans and step-by-step placement |
 | `com.civillagers.platform` | `Loader` (per loader) and `Vanilla` (per version): the seams |
-| `com.civillagers.mixin` | `MobMixin`: zombies and raiders get a target goal for guards |
+| `com.civillagers.mixin` | `MobMixin`: zombies and raiders get a target goal for guards. `ZombieMixin`, `ZombieVillagerMixin`: zombie guards and their cure |
 | `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version |
 
 ## Where to look
 
+- [docs/knowledge/README.md](docs/knowledge/README.md): the knowledge graph, one note per concept (the
+  guard, its clothes, zombie guards, the village, decisions, glossary). Read the notes a task touches;
+  a change to a concept updates its note in the same commit.
 - [docs/ROADMAP.md](docs/ROADMAP.md): the phases, and the performance and memory rules with budgets.
 - [src/main/java/com/civillagers/platform/AGENTS.md](src/main/java/com/civillagers/platform/AGENTS.md): the loader and version seams.
 - [src/gametest/java/AGENTS.md](src/gametest/java/AGENTS.md): writing and running gametests.
