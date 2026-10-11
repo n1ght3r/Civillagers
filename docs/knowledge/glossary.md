@@ -16,6 +16,9 @@ it here, and say why in [decisions.md](decisions.md) if it was a choice.
 | villager type | The biome a villager's clothes come from: `minecraft:plains`, `snow`, ... | | [villager-type.md](villager-type.md) |
 | clothes | The `type/<type>.png` texture drawn over the bare villager body | | [villager-type.md](villager-type.md) |
 | gear | What a guard holds and wears: weapon, shield, armor | | [guard.md](guard.md) |
+| own gear, a player's gear | A guard's gear from its level (never drops, never comes off), or a piece a player handed over (always drops, can be taken back) | | [guard.md](guard.md) |
+| level | A guard's rank, 1 to 5, from experience; upgrades its own gear, adds no stat | Novice, Apprentice, Journeyman, Expert, Master (vanilla's `merchant.level.1` to `5`, translated by the game) | [guard.md](guard.md#levels) |
+| badge | Vanilla's level badge on the belt: stone, iron, gold, emerald, diamond | | [guard.md](guard.md#levels) |
 | village | Saved data for one village, per dimension | | [village.md](village.md) |
 | anchor, bell | The bells a village grows around | | [village.md](village.md) |
 | member | A villager who belongs to a village, kept as a UUID | | [village.md](village.md) |

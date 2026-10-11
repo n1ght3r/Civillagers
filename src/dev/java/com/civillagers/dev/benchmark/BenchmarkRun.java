@@ -203,7 +203,7 @@ final class BenchmarkRun {
         settings.addProperty("schedulerMaxPerTick", VillageScheduler.maxPerTick());
         settings.addProperty("guardPathsPerTick", com.civillagers.ai.GuardPathBudget.PER_TICK);
         settings.addProperty("guardCombatPathsPerTick", com.civillagers.ai.GuardPathBudget.COMBAT_PER_TICK);
-        settings.addProperty("guardActiveRange", com.civillagers.entity.Guard.ACTIVE_RANGE);
+        settings.addProperty("guardActiveRange", com.civillagers.entity.guard.Guard.ACTIVE_RANGE);
         json.add("settings", settings);
 
         JsonArray villages = new JsonArray();

@@ -1,12 +1,12 @@
 package com.civillagers.gametest;
 
-import com.civillagers.ai.CivCelebrateGoal;
-import com.civillagers.ai.CivHideGoal;
-import com.civillagers.ai.CivMeetGoal;
-import com.civillagers.ai.CivPanicGoal;
-import com.civillagers.ai.GuardRallyGoal;
+import com.civillagers.ai.guard.GuardRallyGoal;
+import com.civillagers.ai.villager.CivCelebrateGoal;
+import com.civillagers.ai.villager.CivHideGoal;
+import com.civillagers.ai.villager.CivMeetGoal;
+import com.civillagers.ai.villager.CivPanicGoal;
 import com.civillagers.entity.CivEntities;
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -82,12 +82,21 @@ public final class VillagerLifeGameTest {
     }
 
     @GameTest
-    public void aGuardShakesItsHeadAtAnEmptyHand(GameTestHelper helper) {
+    public void aGuardShakesItsHeadWhenItCannotTrade(GameTestHelper helper) {
         TestFixtures.floor(helper, 1);
         Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
         Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         TestFixtures.interact(guard, player, InteractionHand.MAIN_HAND);
-        TestFixtures.check(helper, guard.isUnhappy(), "a guard has nothing to trade, so it shakes its head");
+        TestFixtures.check(helper, guard.getTradingPlayer() == player && !guard.isUnhappy(), "an empty hand opens a guard's trades");
+        guard.stopTrading();
+
+        Mob zombie = helper.spawnWithNoFreeWill(TestFixtures.zombie(), new BlockPos(4, 2, 4));
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        guard.setTarget(zombie);
+        TestFixtures.interact(guard, player, InteractionHand.MAIN_HAND);
+        TestFixtures.check(helper, guard.getTradingPlayer() == null && guard.isUnhappy(), "a guard in a fight does not trade, and shakes its head");
+        guard.setTarget(null);
+        zombie.discard();
         // Two seconds of shaking, run here at once: a test has fewer ticks than that.
         for (int i = 0; i < 40; i++) guard.aiStep();
         TestFixtures.check(helper, !guard.isUnhappy(), "and stops after two seconds");

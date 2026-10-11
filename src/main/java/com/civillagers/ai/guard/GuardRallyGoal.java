@@ -1,6 +1,8 @@
-package com.civillagers.ai;
+package com.civillagers.ai.guard;
 
-import com.civillagers.entity.Guard;
+import com.civillagers.ai.GuardPathBudget;
+import com.civillagers.ai.villager.CivHideGoal;
+import com.civillagers.entity.guard.Guard;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
@@ -10,7 +12,8 @@ import java.util.EnumSet;
 /**
  * When a bell rings ({@link Guard#alarmBell()}), an armed guard with nothing to fight runs to it while the
  * villagers hide, and stands by it until the alarm is over; the target goal picks up whatever comes. A
- * guard with no weapon hides instead ({@link CivHideGoal}).
+ * guard with no weapon hides instead ({@link CivHideGoal}). During a raid the bell is left alone: the guards
+ * go after the raiders where they are ({@link GuardRaidGoal}), not where the bell is.
  *
  * <p>A path from {@link GuardPathBudget}, searched again only when the last one ended short of the bell.
  */
@@ -31,7 +34,8 @@ public final class GuardRallyGoal extends Goal {
     @Override
     public boolean canUse() {
         // No bell, the common case, first: it is a field read.
-        return guard.alarmBell() != null && guard.getTarget() == null && !guard.isSleeping() && guard.isCombatant();
+        return guard.alarmBell() != null && guard.getTarget() == null && !guard.isSleeping() && guard.isCombatant()
+                && guard.raidCenter() == null;
     }
 
     @Override

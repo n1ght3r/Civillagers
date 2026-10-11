@@ -1,6 +1,6 @@
-package com.civillagers.ai;
+package com.civillagers.ai.guard;
 
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;

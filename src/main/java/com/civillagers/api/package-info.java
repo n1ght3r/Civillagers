@@ -14,7 +14,7 @@
  *
  * <p>Beside this package, these classes are public and kept stable for addons: {@link
  * com.civillagers.entity.CivVillager} (extend it for a villager of an addon's own) and the public methods
- * of {@link com.civillagers.entity.Guard}. Register listeners from the addon's own initializer, on either
+ * of {@link com.civillagers.entity.guard.Guard}. Register listeners from the addon's own initializer, on either
  * loader; nothing here names one. See docs/knowledge/addon-api.md.
  */
 package com.civillagers.api;

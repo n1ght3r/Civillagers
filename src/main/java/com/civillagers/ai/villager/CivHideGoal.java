@@ -1,5 +1,7 @@
-package com.civillagers.ai;
+package com.civillagers.ai.villager;
 
+import com.civillagers.ai.GuardPathBudget;
+import com.civillagers.ai.Homes;
 import com.civillagers.entity.CivVillager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;

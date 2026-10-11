@@ -4,7 +4,7 @@ import com.civillagers.dev.agent.core.AgentDispatcher;
 import com.civillagers.dev.agent.core.AgentException;
 import com.civillagers.dev.agent.core.AgentRequest;
 import com.civillagers.entity.CivEntities;
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
 import com.google.gson.JsonArray;
@@ -125,6 +125,8 @@ final class ServerProbes {
         json.addProperty("sleeping", guard.isSleeping());
         json.addProperty("aggressive", guard.isAggressive());
         json.addProperty("noAi", guard.isNoAi());
+        json.addProperty("level", guard.villagerLevel());
+        json.addProperty("xp", guard.getVillagerXp());
         LivingEntity target = guard.getTarget();
         json.addProperty("target", target == null ? null : BuiltInRegistries.ENTITY_TYPE.getKey(target.getType()).toString());
         JsonObject gear = new JsonObject();

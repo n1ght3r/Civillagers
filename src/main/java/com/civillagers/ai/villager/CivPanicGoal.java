@@ -1,5 +1,6 @@
-package com.civillagers.ai;
+package com.civillagers.ai.villager;
 
+import com.civillagers.ai.GuardPathBudget;
 import com.civillagers.entity.CivVillager;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;

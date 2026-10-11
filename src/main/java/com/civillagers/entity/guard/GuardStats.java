@@ -1,4 +1,4 @@
-package com.civillagers.entity;
+package com.civillagers.entity.guard;
 
 /**
  * What guards cost the server over the last {@link #WINDOW} ticks, for {@code /civillagers debug stats}

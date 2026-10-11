@@ -23,7 +23,9 @@ import java.util.function.Supplier;
  * <p>The zombie is vanilla's own zombie villager, so it looks, fights and is cured exactly like one (a
  * splash of weakness, then a golden apple); it keeps the villager's gear, name and the clothes of its
  * villager type, and carries the entity tag {@link #tagFor} names, which vanilla saves with it, to say what
- * it is cured into: {@code civillagers.zombie_of.civillagers.guard} for a guard.
+ * it is cured into: {@code civillagers.zombie_of.civillagers.guard} for a guard. What else a type keeps
+ * through it (a guard's level, experience and trades) goes in the zombie's own villager data, through
+ * {@link CivVillager#carryIntoZombie} and {@link CivVillager#carryFromZombie}.
  *
  * <p>{@code ZombieMixin} calls {@link #turns} and {@link #zombify} when a zombie kills a villager of the
  * mod; {@code ZombieVillagerMixin} calls {@link #cure} when a zombie villager's cure finishes.
@@ -72,6 +74,7 @@ public final class ZombieVillagers {
             Vanilla.setVillagerType(created, type);
             created.addTag(tag);
             created.setPersistenceRequired();
+            villager.carryIntoZombie(created);
         });
         if (zombie == null) return null;
         if (!villager.isSilent()) level.levelEvent(LevelEvent.SOUND_ZOMBIE_INFECTED, zombie.blockPosition(), 0);
@@ -92,6 +95,7 @@ public final class ZombieVillagers {
         CivVillager cured = Vanilla.convert(zombie, type, created -> {
             created.setVillagerType(villagerType);
             created.removeTag(tag);
+            created.carryFromZombie(zombie);
         });
         if (cured == null) return null;
         if (!zombie.isSilent()) level.levelEvent(LevelEvent.SOUND_ZOMBIE_CONVERTED, cured.blockPosition(), 0);

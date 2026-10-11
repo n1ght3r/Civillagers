@@ -1,5 +1,7 @@
-package com.civillagers.ai;
+package com.civillagers.ai.villager;
 
+import com.civillagers.ai.Ground;
+import com.civillagers.ai.GuardPathBudget;
 import com.civillagers.entity.CivVillager;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
@@ -18,7 +20,9 @@ import java.util.function.Predicate;
 /**
  * In vanilla's meeting hours ({@link #MEET_START} to {@link #MEET_END}, late morning) a villager of the mod
  * now and then walks to its village's bell, as villagers gather there, and stands a while talking: it
- * turns to a villager or another villager of the mod beside it, and one of the mod's turns back.
+ * turns to the villager or villager of the mod nearest it. Each turns only its own head: two of the mod's
+ * beside each other face each other because each is the other's nearest, and a third talking to one of
+ * them never pulls that one's head away, which would swing it between the two every tick.
  *
  * <p>Meeting is for players to see, so it only happens with one near ({@link CivVillager#playerNear()}). It
  * decides at most once every {@link #CHECK_INTERVAL} ticks, walks one path from {@link GuardPathBudget},
@@ -81,6 +85,7 @@ public final class CivMeetGoal extends Goal {
         int z = BlockPos.getZ(bell) + villager.getRandom().nextInt(7) - 3;
         if (!level.hasChunk(x >> 4, z >> 4)) return false;
         point.set(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+        if (!Ground.onDryGround(level, point)) return false;
         if (point.distSqr(villager.blockPosition()) > (double) MAX_WALK * MAX_WALK) return false;
         if (!GuardPathBudget.tryTake(level.getGameTime())) return false;
         return villager.getNavigation().moveTo(x + 0.5, point.getY(), z + 0.5, SPEED);
@@ -118,7 +123,6 @@ public final class CivMeetGoal extends Goal {
         if (partner == null || !partner.isAlive() || villager.distanceToSqr(partner) > TALK_RANGE * TALK_RANGE * 4) return;
         // A look lasts two ticks, so it is renewed every tick the two talk.
         villager.getLookControl().setLookAt(partner, 30.0F, 30.0F);
-        if (partner instanceof CivVillager other) other.getLookControl().setLookAt(villager, 30.0F, 30.0F);
     }
 
     /** The nearest villager, wandering trader or villager of the mod within {@link #TALK_RANGE}, or null. */

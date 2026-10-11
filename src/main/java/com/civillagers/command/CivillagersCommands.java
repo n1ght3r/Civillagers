@@ -2,8 +2,8 @@ package com.civillagers.command;
 
 import com.civillagers.Civillagers;
 import com.civillagers.ai.GuardPathBudget;
-import com.civillagers.ai.GuardTargetGoal;
-import com.civillagers.entity.GuardStats;
+import com.civillagers.ai.guard.GuardTargetGoal;
+import com.civillagers.entity.guard.GuardStats;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.VillageDetector;

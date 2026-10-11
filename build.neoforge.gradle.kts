@@ -213,8 +213,8 @@ tasks.named<ProcessResources>("processDevResources") {
 /**
  * Fails when a Fabric-only key survives into the processed resources, from datagen or from a
  * hand-written file: NeoForge would load it as a broken recipe or ignore the condition. When datagen
- * starts writing `fabric:load_conditions`, translate them in processResources the way ThirstWasTaken2's
- * build-logic ResourceTranslation.kt does, and this keeps the translation honest.
+ * starts writing `fabric:load_conditions`, translate them in processResources (a translation step in build-logic, which
+ * maps each condition to NeoForge's), and this keeps the translation honest.
  */
 tasks.register("checkNeoForgeResources") {
     group = "verification"

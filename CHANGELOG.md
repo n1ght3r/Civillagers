@@ -27,3 +27,20 @@
   tick in four while they stand still. Path searches in a fight are capped and only follow a target that
   moved.
 - `runBenchmark`: what the mod costs a server, measured against the roadmap's budgets.
+- Guards have a villager's five levels, Novice to Master, at vanilla's experience thresholds, with
+  vanilla's badge on the belt. They gain experience by trading and from what they kill (the experience the
+  mob would drop for a player). A level adds no stat: it upgrades the guard's own gear by table (leather
+  up to diamond, a shield, enchantments at Expert and Master) and teaches two more trades. A spawn egg
+  makes a guard of any level.
+- Guards trade, as villagers do: bounties on monster drops and the gear of their rank, priced as vanilla's
+  armorer, weaponsmith, cleric and fletcher price the same goods. Click a guard with anything but gear to
+  trade.
+- A guard's own gear never drops (from it or from its zombie) and never wears out; a piece a player hands
+  over goes on top of it, always drops, and is the one piece the player can take back. A zombie guard keeps
+  its level, experience and trades through the cure.
+- Guards keep out of water: patrol and meeting points are on dry ground only, and paths go round water.
+- In a raid, guards go after the raiders where they are, each the one nearest it, instead of gathering at
+  the bell.
+- Guards meeting at the bell no longer shake their heads back and forth.
+- For addons: `Guard` moved to `com.civillagers.entity.guard`, and the goals to `com.civillagers.ai.guard`
+  and `com.civillagers.ai.villager`.

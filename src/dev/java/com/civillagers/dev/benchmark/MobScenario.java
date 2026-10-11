@@ -1,9 +1,9 @@
 package com.civillagers.dev.benchmark;
 
-import com.civillagers.ai.GuardTargetGoal;
+import com.civillagers.ai.guard.GuardTargetGoal;
 import com.civillagers.dev.platform.DevVanilla;
 import com.civillagers.entity.CivEntities;
-import com.civillagers.entity.GuardStats;
+import com.civillagers.entity.guard.GuardStats;
 import com.google.gson.JsonObject;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;

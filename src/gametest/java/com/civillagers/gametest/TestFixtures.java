@@ -6,13 +6,13 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ChargedProjectiles;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,6 +22,55 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 /** What several tests need, kept the same on every Minecraft version. */
 final class TestFixtures {
     private TestFixtures() { }
+
+    /**
+     * A save held in memory, for reading back what a villager of the mod saved without the level's save
+     * format, which differs between versions. A value with a codec is kept as it is, not encoded.
+     */
+    static final class MemorySave implements com.civillagers.platform.SavingMob.Output, com.civillagers.platform.SavingMob.Input {
+        private final java.util.Map<String, Object> values = new java.util.HashMap<>();
+
+        @Override
+        public void putString(String key, String value) {
+            values.put(key, value);
+        }
+
+        @Override
+        public void putInt(String key, int value) {
+            values.put(key, value);
+        }
+
+        @Override
+        public void putLong(String key, long value) {
+            values.put(key, value);
+        }
+
+        @Override
+        public <T> void store(String key, com.mojang.serialization.Codec<T> codec, T value) {
+            values.put(key, value);
+        }
+
+        @Override
+        public String getString(String key, String fallback) {
+            return values.get(key) instanceof String value ? value : fallback;
+        }
+
+        @Override
+        public int getInt(String key, int fallback) {
+            return values.get(key) instanceof Integer value ? value : fallback;
+        }
+
+        @Override
+        public long getLong(String key, long fallback) {
+            return values.get(key) instanceof Long value ? value : fallback;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> java.util.Optional<T> read(String key, com.mojang.serialization.Codec<T> codec) {
+            return java.util.Optional.ofNullable((T) values.get(key));
+        }
+    }
 
     /**
      * Asserts with a plain message. {@link GameTestHelper#assertTrue} takes a {@link Component} from

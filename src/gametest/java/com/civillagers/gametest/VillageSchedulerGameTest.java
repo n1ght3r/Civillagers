@@ -2,7 +2,7 @@ package com.civillagers.gametest;
 
 import com.civillagers.Civillagers;
 import com.civillagers.ai.GuardPathBudget;
-import com.civillagers.entity.GuardStats;
+import com.civillagers.entity.guard.GuardStats;
 import com.civillagers.village.Village;
 import com.civillagers.village.VillageScheduler;
 import com.civillagers.village.VillageStats;

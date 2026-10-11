@@ -1,6 +1,6 @@
 package com.civillagers.village;
 
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;

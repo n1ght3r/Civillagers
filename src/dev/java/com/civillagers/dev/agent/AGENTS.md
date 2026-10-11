@@ -1,9 +1,8 @@
 # The agent client
 
 A way for an agent to drive a real Minecraft client or server and read real values out of it: where the
-guards are and what they wear, the villages, a command's feedback, a capture of the frame. Ported from
-ThirstWasTaken2's agent and trimmed to what this mod needs. [src/dev/java/AGENTS.md](../../../../AGENTS.md)
-is the source set it belongs to.
+guards are and what they wear, the villages, a command's feedback, a capture of the frame.
+[src/dev/java/AGENTS.md](../../../../AGENTS.md) is the source set it belongs to.
 
 `core/` is the queue, the reply envelope, the dispatch loop and the watchdog, in plain Java and Gson;
 `checkAgentCore` fails the build if it imports Minecraft, a loader or the mod. `game/` is what any process

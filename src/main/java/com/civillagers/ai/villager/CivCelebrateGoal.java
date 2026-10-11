@@ -1,4 +1,4 @@
-package com.civillagers.ai;
+package com.civillagers.ai.villager;
 
 import com.civillagers.entity.CivVillager;
 import it.unimi.dsi.fastutil.ints.IntList;

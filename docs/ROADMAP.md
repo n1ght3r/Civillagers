@@ -52,7 +52,7 @@ whatever is retained piles up with each one.
 
 | Tool | For |
 |---|---|
-| `runBenchmark` (ported from ThirstWasTaken2) | What the mod costs on a fixed seed: village ticks with 1 / 10 / 50 / 100 villages, one village's memory, guards on patrol, in combat and with nobody near beside vanilla villagers and iron golems; each budget below marked met or missed. See `src/dev/java/com/civillagers/dev/benchmark/AGENTS.md` |
+| `runBenchmark` | What the mod costs on a fixed seed: village ticks with 1 / 10 / 50 / 100 villages, one village's memory, guards on patrol, in combat and with nobody near beside vanilla villagers and iron golems; each budget below marked met or missed. See `src/dev/java/com/civillagers/dev/benchmark/AGENTS.md` |
 | JFR (`-Pprofile`) | Hot methods and allocation sites |
 | Leak check (`tools/agent/smoke/leak.jsonl`) | A driven client opens and leaves a world with guards and a bell 5 times, then takes the JVM's class histogram: no `ServerLevel`, no server, no `Guard`, nothing of the mod's world-bound packages. Vanilla keeps the last `ClientLevel` until the next world opens, so the last round removes the guards first |
 | Gametests | Every lifecycle rule has a test: create villages, stop the server, check every cache is empty |
@@ -92,7 +92,7 @@ world-bound classes on any node.
 - `VillageIndex`: the chunk → village index.
 - `VillageScheduler`: staggered, budgeted ticking, only for villages whose chunks are loaded.
 - Lifecycle hooks in `platform/Loader`: `onServerStarted`, `onServerStopped`, `onServerTickEnd`.
-- Port `runBenchmark` and `/civillagers debug stats` from ThirstWasTaken2.
+- `runBenchmark` and `/civillagers debug stats`.
 - **Done when:** gametests for creating, saving, reloading and merging villages pass; the benchmark with 50 empty villages is ≤ 0.1 ms/tick; the leak check passes.
 
 ### Phase 2 — Guards ✅
@@ -128,6 +128,8 @@ the head (option A of five drawn, chosen 2026-10-10); the same file on every ver
 | 2.16 | A guard a zombie kills rises as a vanilla zombie villager with its gear (villager odds); cured, it is a guard again (`ZombieGuards`, since 2.17 `ZombieVillagers`; `ZombieMixin`, `ZombieVillagerMixin`) | `aGuardTurnsWithAVillagersOdds`, `aGuardAZombieKillsOnHardRisesAsAZombie`, `aZombieGuardKeepsItsGearAndIsCuredBackToAGuard`, `anOrdinaryZombieVillagerIsLeftToVanilla` | ✅ |
 | 2.17 | `CivVillager`, the base the chief and builders will extend (look, clothes, idling, saving, zombies, renderer); an addon API in `com.civillagers.api` (goal and threat hooks, zombie hooks, `civillagers:guard_weapons`) | `AddonApiGameTest`, every `GuardGameTest` | ✅ |
 | 2.18 | Villager life: civilians (a disarmed guard) flee and hide, an armed guard rallies to a rung bell, all meet at the bell in vanilla's hours, celebrate a won raid and shake their heads; trades, breeding, gossip, golems, witches left out (`docs/knowledge/villager-life.md`) | `VillagerLifeGameTest` | ✅ |
+| 2.19 | Guard levels 1 to 5 at vanilla's thresholds, with vanilla's badge; experience from trades (two per level from a pool) and from what it kills (the experience the mob would drop, gained at once); a level upgrades its own gear by table (never a stat), its own gear never drops or wears out; a spawn egg makes any level; level, experience and trades survive a zombie and the cure | `GuardLevelGameTest`, `aZombieGuardKeepsItsGearAndIsCuredBackToAGuard`, `aPlayerHandsAGuardASword` | ✅ |
+| 2.20 | Trades checked against vanilla 26.3's trade data and brought in line; patrol and meeting points on dry ground only and water twice as costly to path through; in a raid each guard hunts the nearest raider (target within 24 blocks, walks towards one within 96) and the bell rally waits; meeting partners no longer pull each other's heads | `patrolAndMeetingPointsAreNeverOnWater`, `aGuardGoesForTheNearestRaider` | ✅ |
 
 **Budget (2.8, decided 2026-10-10).** The first target was "20 guards ≤ 0.15 ms/tick", below what any
 vanilla mob costs under this measurement: each guard's whole tick, its AI, its pathfinding and the
@@ -196,7 +198,7 @@ One chief per village, a slow decision loop driven by needs, and a plan in the v
 |---|---|
 | 6.1 | Config (file, then Mod Menu / NeoForge screen) with every performance limit configurable |
 | 6.2 | Compatibility: MCA, Guard Villagers, Lithium, ModernFix |
-| 6.3 | Documentation, Modrinth and CurseForge pages, release scripts (ported from ThirstWasTaken2) |
+| 6.3 | Documentation, Modrinth and CurseForge pages, release scripts |
 | 6.4 | A guard skin of its own |
 
 ### After 1.0 (ideas)

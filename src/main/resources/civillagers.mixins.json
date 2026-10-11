@@ -4,6 +4,7 @@
   "compatibilityLevel": "${java}",
   "mixins": [
     "BellBlockEntityMixin",
+    "LivingEntityMixin",
     "MobMixin",
     "ZombieMixin",
     "ZombieVillagerMixin"

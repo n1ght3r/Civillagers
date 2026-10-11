@@ -16,8 +16,9 @@ changelog; the rest of the mod may change in any release.
 | Make it turn into a zombie villager and be cured back | `CivillagersApi.turnsIntoZombie(type)` |
 
 Beside the `api` package, `CivVillager` (`villagerType`, `playerNear`, `isCombatant`, `raidCenter`,
-`raidWon`, `alarmBell`, `refuse`, ...) and the public methods of `Guard` (`goesAfter`, `findThreat`,
-`equipGear`, `takeGear`, `gearSlot`, ...) are kept stable for addons. A villager of an addon's own decides
+`raidWon`, `alarmBell`, `refuse`, ...) and the public methods of `Guard`
+(`com.civillagers.entity.guard.Guard`: `goesAfter`, `findThreat`, `equipGear`, `takeGear`, `gearSlot`,
+`villagerLevel`, `addXp`, ...) are kept stable for addons. A villager of an addon's own decides
 whether it fights by overriding `isCombatant()`.
 
 ## Rules for listeners

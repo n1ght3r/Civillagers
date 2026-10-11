@@ -47,5 +47,8 @@ public static Foo foo(Bar bar) {
   its own extends because vanilla's save hooks changed shape in 1.21.6, and
   `client/platform/CivVillagerModel` and `CivVillagerRenderer`, whose type parameters and overridden
   methods changed with 1.21.2's render states. Keep what does not differ outside, in `client/render`.
+- When the mod must read something vanilla keeps private, a mixin adds a getter through an interface
+  here that common code casts to: `ZombieVillagerOffers` (`mixin/ZombieVillagerMixin`). Mixin classes themselves cannot be named outside
+  `mixin/`.
 - The file on disk is in the state of the **active** node (`26.3.x`). Edit it in that state and run
   `./gradlew "Reset active project"` before committing.

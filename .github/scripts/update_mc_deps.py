@@ -4,7 +4,7 @@ Dependabot cannot do this. The versions live in a Stonecutter properties file it
 if it did, it would offer every node the newest Fabric API, the one built for the newest Minecraft. This
 asks Modrinth instead, once per node, for the newest upload of each mod that is built for that node's
 loader and lists the Minecraft version that node compiles against, and writes it back in place, comments
-and layout untouched. Adapted from ThirstWasTaken2's script of the same name.
+and layout untouched.
 
     python .github/scripts/update_mc_deps.py            # rewrite the file
     python .github/scripts/update_mc_deps.py --dry-run  # only report

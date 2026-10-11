@@ -1,6 +1,7 @@
 package com.civillagers.entity;
 
 import com.civillagers.Civillagers;
+import com.civillagers.entity.guard.Guard;
 import com.civillagers.platform.Loader;
 import com.civillagers.platform.Vanilla;
 import net.minecraft.core.Registry;

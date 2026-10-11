@@ -1,6 +1,6 @@
-package com.civillagers.ai;
+package com.civillagers.ai.guard;
 
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 

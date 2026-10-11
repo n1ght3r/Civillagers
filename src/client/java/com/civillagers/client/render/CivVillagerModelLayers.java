@@ -3,7 +3,6 @@ package com.civillagers.client.render;
 import com.civillagers.Civillagers;
 import com.civillagers.client.platform.ClientVanilla;
 import com.civillagers.entity.CivVillager;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -16,6 +15,7 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -35,7 +35,8 @@ import java.util.Map;
  * The arms hang flush against the body, as a player's do; the robe, half a pixel wider, tucks under them.
  *
  * <p>That texture is a villager's bare body, in a grey shirt. Its clothes are a second texture drawn over
- * it on the same model, one per villager type ({@link #clothes}), as vanilla draws a villager's.
+ * it on the same model, one per villager type ({@link #clothes}), as vanilla draws a villager's, and the
+ * badge of its level a third ({@link #badge}).
  */
 public final class CivVillagerModelLayers {
     public static final ModelLayerLocation BODY = new ModelLayerLocation(Civillagers.id("villager"), "main");
@@ -49,6 +50,10 @@ public final class CivVillagerModelLayers {
             VANILLA_CLOTHES.put(id.toString(), clothesTexture(id));
         }
     }
+    /** The badges of the five levels, novice to master, as vanilla draws them on a villager's belt. Never changes. */
+    private static final Identifier[] BADGES = {
+            badgeTexture("stone"), badgeTexture("iron"), badgeTexture("gold"), badgeTexture("emerald"), badgeTexture("diamond"),
+    };
     /** A helmet is drawn this much taller, to cover the villager's head: ten pixels where a player's is eight. */
     public static final float HELMET_STRETCH = 10.0F / 8.0F;
 
@@ -100,6 +105,19 @@ public final class CivVillagerModelLayers {
 
     private static Identifier clothesTexture(Identifier type) {
         return type.withPath("textures/entity/villager/type/" + type.getPath() + ".png");
+    }
+
+    /**
+     * The badge on the belt of a villager of {@code level}, 1 (novice, stone) to 5 (master, diamond): vanilla's
+     * own, read by path from the game, drawn over the robe on the same model. Null for no badge. The robe
+     * stands out past a chestplate, so the badge shows over armor too.
+     */
+    public static Identifier badge(int level) {
+        return level >= 1 && level <= BADGES.length ? BADGES[level - 1] : null;
+    }
+
+    private static Identifier badgeTexture(String name) {
+        return Identifier.withDefaultNamespace("textures/entity/villager/profession_level/" + name + ".png");
     }
 
     /**

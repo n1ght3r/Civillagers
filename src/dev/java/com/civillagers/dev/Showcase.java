@@ -3,7 +3,7 @@ package com.civillagers.dev;
 import com.civillagers.command.CivillagersCommands;
 import com.civillagers.dev.platform.DevVanilla;
 import com.civillagers.entity.CivEntities;
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import com.civillagers.platform.Vanilla;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
@@ -27,7 +27,7 @@ import java.util.UUID;
 
 /**
  * {@code /civillagers showcase}: a row of guards standing still in front of the player, each in different
- * gear and the clothes of a different villager type, to look at the guard's model, its clothes, its held
+ * gear, level and the clothes of a different villager type, to look at the guard's model, its clothes, its level badge, its held
  * items, its armor and its poses in a real client: drawing a bow, raising a shield, aiming a loaded
  * crossbow. With
  * {@code -Dcivillagers.showcase=true} it runs by itself shortly after the first player joins, so a client
@@ -54,6 +54,8 @@ public final class Showcase {
             "minecraft:plains", "minecraft:taiga", "minecraft:desert", "minecraft:savanna",
             "minecraft:snow", "minecraft:swamp", "minecraft:jungle",
     };
+    /** The level of each guard in the row, so every badge shows: stone, iron, gold, emerald and diamond. */
+    private static final int[] LEVELS = { 1, 5, 3, 2, 4, 3, 1 };
     /** The guard in the row that raises its shield. */
     private static final int BLOCKING = 4;
     private static final EquipmentSlot[] SLOTS = {
@@ -122,7 +124,8 @@ public final class Showcase {
             // reaches it.
             Item[] outfit = OUTFITS[i];
             String type = VILLAGER_TYPES[i];
-            Guard guard = CivEntities.guard().spawn(level, created -> dress(created, outfit, type), at,
+            int rank = LEVELS[i];
+            Guard guard = CivEntities.guard().spawn(level, created -> dress(created, outfit, type, rank), at,
                     EntitySpawnReason.MOB_SUMMONED, false, false);
             if (guard == null) continue;
             if (i == BLOCKING) {
@@ -138,10 +141,11 @@ public final class Showcase {
         return spawned;
     }
 
-    /** Puts {@code outfit} and the clothes of {@code type} on {@code guard}, still, in the pose its weapon shows best. */
-    private static void dress(Guard guard, Item[] outfit, String type) {
+    /** Puts {@code outfit}, the clothes of {@code type} and the badge of {@code rank} on {@code guard}, still, in the pose its weapon shows best. */
+    private static void dress(Guard guard, Item[] outfit, String type, int rank) {
         guard.setNoAi(true);
         guard.setVillagerType(type);
+        guard.setVillagerLevel(rank);
         for (int s = 0; s < SLOTS.length; s++) {
             Item item = outfit[s];
             guard.setItemSlot(SLOTS[s], item == null ? ItemStack.EMPTY : new ItemStack(item));

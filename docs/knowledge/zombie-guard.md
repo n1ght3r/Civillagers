@@ -10,13 +10,15 @@ addon's villager can be (`CivillagersApi.turnsIntoZombie`).
   kills a guard: never on Easy or Peaceful, half the time on Normal, always on Hard. The guard drops
   nothing; it rises in place.
 - **The zombie** is vanilla's own **zombie villager**: it looks, fights, burns and is cured exactly like
-  one. It keeps the guard's gear (and fights with its weapon), its name and its
-  [clothes](villager-type.md), and never despawns, so gear a player gave is never lost. Killed, it drops
-  that gear.
+  one. It keeps the guard's gear (and fights with its weapon), its name, its
+  [clothes](villager-type.md), and its level, experience and trades (in vanilla's own villager data, as
+  a zombie villager keeps a villager's), and never despawns, so gear a player gave is never lost. Killed,
+  it drops only what a player gave the guard; the guard's own gear never drops.
 - **Cure**: vanilla's. Weakness (a splash potion), then a golden apple; it shakes for 3 to 5 minutes
-  (faster near beds and iron bars) and comes back a **guard**, with its gear, name and clothes.
+  (faster near beds and iron bars) and comes back a **guard**, with its gear, name, clothes, level,
+  experience and trades. What a player gave it is still theirs to take back: the drop chances say so.
 - Unlike a cured villager, a cured guard gives no trade discount and no "Zombie Doctor" advancement:
-  those belong to a villager's gossip and trades, which a guard has none of.
+  those come from a villager's gossip, which a guard has none of.
 
 ## In the code
 
@@ -25,7 +27,8 @@ addon's villager can be (`CivillagersApi.turnsIntoZombie`).
 | The rules: which types turn, odds, turning, curing | [entity/ZombieVillagers.java](../../src/main/java/com/civillagers/entity/ZombieVillagers.java) |
 | A zombie kills a villager of the mod | `mixin/ZombieMixin`, at the head of `Zombie.killedEntity`, where vanilla turns villagers |
 | A cure finishes | `mixin/ZombieVillagerMixin`, at the head of `ZombieVillager.finishConversion` |
-| Conversion across versions | `Vanilla.convert`, `Vanilla.zombieVillagerType`, `Vanilla.villagerTypeOf`, `Vanilla.setVillagerType` |
+| Conversion across versions | `Vanilla.convert`, `Vanilla.zombieVillagerType`, `Vanilla.villagerTypeOf`, `Vanilla.setVillagerType`, `Vanilla.villagerLevelOf`, `Vanilla.setVillagerLevel` |
+| What a type keeps beyond gear, name and clothes | `CivVillager.carryIntoZombie` / `carryFromZombie`; a guard's level, experience and trades. The trades are read back through `platform/ZombieVillagerOffers`, which `mixin/ZombieVillagerMixin` adds |
 | Hooks for addons | `CivVillagerEvents.TURNED_ZOMBIE`, `CivVillagerEvents.CURED` ([addon-api.md](addon-api.md)) |
 | Tests | `aGuardTurnsWithAVillagersOdds`, `aGuardAZombieKillsOnHardRisesAsAZombie`, `aZombieGuardKeepsItsGearAndIsCuredBackToAGuard`, `anOrdinaryZombieVillagerIsLeftToVanilla` in [GuardGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardGameTest.java); `turningAndCuringCallTheirListeners` in [AddonApiGameTest.java](../../src/gametest/java/com/civillagers/gametest/AddonApiGameTest.java) |
 

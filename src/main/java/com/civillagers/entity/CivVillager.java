@@ -1,9 +1,9 @@
 package com.civillagers.entity;
 
-import com.civillagers.ai.CivCelebrateGoal;
-import com.civillagers.ai.CivHideGoal;
-import com.civillagers.ai.CivMeetGoal;
-import com.civillagers.ai.CivPanicGoal;
+import com.civillagers.ai.villager.CivCelebrateGoal;
+import com.civillagers.ai.villager.CivHideGoal;
+import com.civillagers.ai.villager.CivMeetGoal;
+import com.civillagers.ai.villager.CivPanicGoal;
 import com.civillagers.api.CivVillagerEvents;
 import com.civillagers.platform.SavingMob;
 import com.civillagers.platform.Vanilla;
@@ -30,11 +30,13 @@ import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.raid.Raid;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.AABB;
 
 import java.util.List;
@@ -87,6 +89,8 @@ public abstract class CivVillager extends SavingMob {
     public static final double HEAR_BELL_RADIUS = 32.0;
     /** Ticks a rung bell keeps a villager alarmed: vanilla's 15 seconds of hiding. */
     public static final int ALARM_TICKS = 300;
+    /** What a step into water costs a path; its edge keeps vanilla's cost, so banks and bridges stay walkable. */
+    private static final float WATER_MALUS = 16.0F;
     /** Ticks a villager shakes its head for. */
     private static final int UNHAPPY_TICKS = 40;
 
@@ -116,6 +120,9 @@ public abstract class CivVillager extends SavingMob {
     protected CivVillager(EntityType<? extends CivVillager> type, Level level) {
         super(type, level);
         ((GroundPathNavigation) getNavigation()).setCanOpenDoors(true);
+        // Twice vanilla's cost for a step through water, so a path takes a bridge or goes round a pond
+        // rather than wading: villagers keep out of water too.
+        setPathfindingMalus(PathType.WATER, WATER_MALUS);
         setCanPickUpLoot(false);
     }
 
@@ -286,6 +293,29 @@ public abstract class CivVillager extends SavingMob {
     /** Whether it is shaking its head, on either side. */
     public boolean isUnhappy() {
         return entityData.get(UNHAPPY) > 0;
+    }
+
+    // Level.
+
+    /**
+     * The level of the badge on its belt, as a villager's shows its level: 1 (novice, stone) to 5 (master,
+     * diamond), or 0 for none. None here; a guard has one.
+     */
+    public int villagerLevel() {
+        return 0;
+    }
+
+    // Zombies.
+
+    /**
+     * Gives {@code zombie}, the zombie villager this villager is turning into, what it should keep for the
+     * cure beyond its gear, name and clothes. Nothing here; a guard keeps its level, experience and trades.
+     */
+    protected void carryIntoZombie(ZombieVillager zombie) {
+    }
+
+    /** Takes back what {@link #carryIntoZombie} gave {@code zombie}, once its cure brought this villager back. */
+    protected void carryFromZombie(ZombieVillager zombie) {
     }
 
     // Villager type.

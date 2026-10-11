@@ -1,6 +1,6 @@
 package com.civillagers.api;
 
-import com.civillagers.entity.Guard;
+import com.civillagers.entity.guard.Guard;
 import net.minecraft.world.entity.Mob;
 
 /** Hooks only guards fire. */

@@ -8,10 +8,12 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SpawnEggItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -125,6 +127,41 @@ public final class Vanilla {
         net.minecraft.core.registries.BuiltInRegistries.VILLAGER_TYPE.getOptional(parsed)
                 .ifPresent(type -> zombie.setVillagerData(zombie.getVillagerData().setType(type)));
         *///?}
+    }
+
+    /** The zombie villager's level, 1 (novice) to 5 (master). 1.21.11 made villager data a record. */
+    public static int villagerLevelOf(ZombieVillager zombie) {
+        //? if >=1.21.11 {
+        return zombie.getVillagerData().level();
+        //?} else
+        //return zombie.getVillagerData().getLevel();
+    }
+
+    /** Gives the zombie villager the level {@code level}, 1 (novice) to 5 (master), which a cure keeps. */
+    public static void setVillagerLevel(ZombieVillager zombie, int level) {
+        //? if >=1.21.11 {
+        zombie.setVillagerData(zombie.getVillagerData().withLevel(level));
+        //?} else
+        //zombie.setVillagerData(zombie.getVillagerData().setLevel(level));
+    }
+
+    /**
+     * Whether a mob spawned for {@code reason} came out of a spawn egg, used by hand or from a dispenser.
+     * 1.21.2 renamed the egg's reason along with the type.
+     */
+    public static boolean fromSpawnEgg(EntitySpawnReason reason) {
+        //? if >=1.21.2 {
+        return reason == EntitySpawnReason.SPAWN_ITEM_USE || reason == EntitySpawnReason.DISPENSER;
+        //?} else
+        //return reason == EntitySpawnReason.SPAWN_EGG || reason == EntitySpawnReason.DISPENSER;
+    }
+
+    /** Makes {@code stack} never wear out. 1.21.5 made the component a plain marker. */
+    public static void makeUnbreakable(ItemStack stack) {
+        //? if >=1.21.5 {
+        stack.set(net.minecraft.core.component.DataComponents.UNBREAKABLE, net.minecraft.util.Unit.INSTANCE);
+        //?} else
+        //stack.set(net.minecraft.core.component.DataComponents.UNBREAKABLE, new net.minecraft.world.item.component.Unbreakable(true));
     }
 
     /** Builds an entity type under {@code path} in the mod's namespace. 1.21.2 keys it by a resource key. */

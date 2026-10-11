@@ -1,6 +1,6 @@
 package com.civillagers.mixin;
 
-import com.civillagers.ai.GuardEnemies;
+import com.civillagers.ai.guard.GuardEnemies;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.GoalSelector;

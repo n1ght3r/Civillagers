@@ -3,7 +3,7 @@ package com.civillagers;
 import com.civillagers.ai.GuardPathBudget;
 import com.civillagers.command.CivillagersCommands;
 import com.civillagers.entity.CivEntities;
-import com.civillagers.entity.GuardStats;
+import com.civillagers.entity.guard.GuardStats;
 import com.civillagers.platform.Loader;
 import com.civillagers.village.StockpileKeys;
 import com.civillagers.village.VillageStats;

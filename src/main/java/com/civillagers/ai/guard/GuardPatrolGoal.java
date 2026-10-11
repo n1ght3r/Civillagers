@@ -1,6 +1,8 @@
-package com.civillagers.ai;
+package com.civillagers.ai.guard;
 
-import com.civillagers.entity.Guard;
+import com.civillagers.ai.Ground;
+import com.civillagers.ai.GuardPathBudget;
+import com.civillagers.entity.guard.Guard;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
 import net.minecraft.core.BlockPos;
@@ -16,7 +18,8 @@ import java.util.EnumSet;
  * the village's bells, inside its radius, and never further than {@link #MAX_STEP} from where the guard
  * stands, so a path stays short; a guard outside any village keeps to the ground around it.
  *
- * <p>A point is chosen from the heightmap, never by scanning blocks, and only in a loaded chunk. Starting
+ * <p>A point is chosen from the heightmap, never by scanning blocks, only in a loaded chunk, and only on
+ * dry ground ({@link Ground#onDryGround}). Starting
  * the walk is one path search, taken from {@link GuardPathBudget}; after that vanilla's navigation
  * follows the path and only searches again when it is stuck. With no player near
  * ({@link Guard#playerNear()}) a guard stays where it is: walking is most of what a guard costs.
@@ -99,6 +102,6 @@ public final class GuardPatrolGoal extends Goal {
         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
         if (Math.abs(y - at.getY()) > 8) return false;
         out.set(x, y, z);
-        return true;
+        return Ground.onDryGround(level, out);
     }
 }

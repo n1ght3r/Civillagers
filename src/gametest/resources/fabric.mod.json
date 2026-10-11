@@ -13,6 +13,7 @@
       "com.civillagers.gametest.VillageDetectionGameTest",
       "com.civillagers.gametest.VillageSchedulerGameTest",
       "com.civillagers.gametest.GuardGameTest",
+      "com.civillagers.gametest.GuardLevelGameTest",
       "com.civillagers.gametest.AddonApiGameTest",
       "com.civillagers.gametest.VillagerLifeGameTest"
     ]

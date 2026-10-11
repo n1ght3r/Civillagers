@@ -4,7 +4,6 @@ A villager civilization mod for **Minecraft 26.3, 26.2 and 1.21.1** on **Fabric*
 **NeoForge**: guards, a village chief, and builders who expand the village on their own.
 
 - Mod id and resource namespace: `civillagers`. Java package: `com.civillagers`.
-- The build layout follows ThirstWasTaken2 (`../ThirstWasTaken2`), trimmed to what this mod needs.
 - Every area below has its own `AGENTS.md`; read it before changing that area. These are the only
   instruction files: no `CLAUDE.md`, which Claude Code would read *instead of* them.
 
@@ -92,15 +91,15 @@ its budget.
 | Package | What |
 |---|---|
 | `com.civillagers` | `Civillagers`, the mod's entry point, called by each loader's entrypoint |
-| `com.civillagers.village` | The village as saved data: members, chief, stockpile, level, plans |
+| `com.civillagers.village` | The village as saved data: members, chief, stockpile, level, plans. [village/AGENTS.md](src/main/java/com/civillagers/village/AGENTS.md) |
 | `com.civillagers.command` | `/civillagers`: `debug stats`, `debug here`, `debug scan` (`benchmark` comes from `src/dev`) |
-| `com.civillagers.entity` | `CivEntities` (registration); `CivVillager`, the base of every villager of the mod; the `Guard`; `ZombieVillagers`; later the village chief and builder |
-| `com.civillagers.api` | What addons build on: events, tags, registrations. Kept stable; changes go in the changelog. See [docs/knowledge/addon-api.md](docs/knowledge/addon-api.md) |
-| `com.civillagers.ai` | Goals: every villager of the mod's panic, hiding, meeting and celebrating (`Civ*Goal`); the guard's patrol, sleep, raid defence, rally, target scan, melee, bow, crossbow and shield, its budgeted paths, and the vanilla mobs that hunt guards; later the chief's decisions |
+| `com.civillagers.entity` | `CivEntities` (registration); `CivVillager`, the base of every villager of the mod; `ZombieVillagers`; each role in a package of its own: `entity.guard` (`Guard`, its gear by level, its trades), later the chief and builder. [entity/AGENTS.md](src/main/java/com/civillagers/entity/AGENTS.md) |
+| `com.civillagers.api` | What addons build on: events, tags, registrations. Kept stable; changes go in the changelog. [api/AGENTS.md](src/main/java/com/civillagers/api/AGENTS.md) |
+| `com.civillagers.ai` | Goals: `ai.villager`, what every villager of the mod does (panic, hide, meet, celebrate); `ai.guard`, the guard's (patrol, sleep, raid, rally, targets, melee, bow, crossbow, shield, trading, who hunts guards); shared helpers (path budget, beds, dry ground) in `ai`; later the chief's decisions. [ai/AGENTS.md](src/main/java/com/civillagers/ai/AGENTS.md) |
 | `com.civillagers.building` | Structure templates, build plans and step-by-step placement |
 | `com.civillagers.platform` | `Loader` (per loader) and `Vanilla` (per version): the seams |
-| `com.civillagers.mixin` | `MobMixin`: zombies and raiders get a target goal for guards. `ZombieMixin`, `ZombieVillagerMixin`: zombie guards and their cure. `BellBlockEntityMixin`: the mod's villagers hear a bell ring |
-| `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version (`CivVillagerModel`, `CivVillagerRenderer`, shared by every villager of the mod) |
+| `com.civillagers.mixin` | `MobMixin`: zombies and raiders get a target goal for guards. `ZombieMixin`, `ZombieVillagerMixin`: zombie guards and their cure. `BellBlockEntityMixin`: the mod's villagers hear a bell ring. `LivingEntityMixin`: a guard gains the experience of what it kills. [mixin/AGENTS.md](src/main/java/com/civillagers/mixin/AGENTS.md) |
+| `com.civillagers.client` | Client entry point, `render/` for models and textures, `platform/` for client seams and the renderer classes that differ per version (`CivVillagerModel`, `CivVillagerRenderer`, shared by every villager of the mod). [client/AGENTS.md](src/client/java/com/civillagers/client/AGENTS.md) |
 
 ## Where to look
 

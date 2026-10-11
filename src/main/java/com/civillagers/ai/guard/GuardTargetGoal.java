@@ -1,7 +1,7 @@
-package com.civillagers.ai;
+package com.civillagers.ai.guard;
 
-import com.civillagers.entity.Guard;
-import com.civillagers.entity.GuardStats;
+import com.civillagers.entity.guard.Guard;
+import com.civillagers.entity.guard.GuardStats;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 

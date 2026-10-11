@@ -1,14 +1,15 @@
 package com.civillagers.gametest;
 
-import com.civillagers.ai.GuardCombatPath;
-import com.civillagers.ai.GuardEnemies;
-import com.civillagers.ai.GuardPatrolGoal;
-import com.civillagers.ai.GuardShieldGoal;
-import com.civillagers.ai.GuardSleepGoal;
-import com.civillagers.ai.GuardTargetGoal;
+import com.civillagers.ai.Ground;
+import com.civillagers.ai.guard.GuardCombatPath;
+import com.civillagers.ai.guard.GuardEnemies;
+import com.civillagers.ai.guard.GuardPatrolGoal;
+import com.civillagers.ai.guard.GuardShieldGoal;
+import com.civillagers.ai.guard.GuardSleepGoal;
+import com.civillagers.ai.guard.GuardTargetGoal;
 import com.civillagers.entity.CivEntities;
-import com.civillagers.entity.Guard;
 import com.civillagers.entity.ZombieVillagers;
+import com.civillagers.entity.guard.Guard;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
@@ -20,10 +21,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
@@ -36,9 +37,7 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Guards: their clothes, their gear, turning into zombies and being cured, how often they look for
@@ -70,6 +69,9 @@ public final class GuardGameTest {
         guard.equipGear(new ItemStack(Items.DIAMOND_SWORD));
         guard.equipGear(new ItemStack(Items.IRON_HELMET));
         guard.setCustomName(Component.literal("Gregor"));
+        guard.setVillagerLevel(3);
+        guard.addXp(Guard.XP_TO_REACH[3]);
+        int trades = guard.getOffers().size();
 
         ZombieVillager zombie = ZombieVillagers.zombify(helper.getLevel(), guard);
         TestFixtures.check(helper, zombie != null && guard.isRemoved(), "the guard should turn into a zombie villager");
@@ -95,6 +97,9 @@ public final class GuardGameTest {
             TestFixtures.check(helper, cured.getMainHandItem().is(Items.DIAMOND_SWORD) && cured.getItemBySlot(EquipmentSlot.HEAD).is(Items.IRON_HELMET),
                     "the cured guard should keep its gear");
             TestFixtures.check(helper, cured.villagerType().equals("minecraft:snow"), "the cured guard should keep its clothes");
+            TestFixtures.check(helper, cured.villagerLevel() == 3 && cured.getVillagerXp() == Guard.XP_TO_REACH[3]
+                    && cured.getOffers().size() == trades, "the cured guard should keep its level, experience and trades");
+            TestFixtures.check(helper, cured.isPlayerGear(EquipmentSlot.MAINHAND), "the sword it was given is still the player's");
             TestFixtures.check(helper, !cured.entityTags().contains(ZombieVillagers.tagFor(CivEntities.guard())), "the cured guard is no zombie any more");
         });
     }
@@ -133,12 +138,19 @@ public final class GuardGameTest {
     }
 
     @GameTest
-    public void aNewGuardCarriesASword(GameTestHelper helper) {
+    public void aNewGuardIsANoviceWithANovicesGear(GameTestHelper helper) {
         TestFixtures.floor(helper, 1);
         Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
         guard.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(guard.blockPosition()),
                 EntitySpawnReason.MOB_SUMMONED, null);
-        TestFixtures.check(helper, guard.getMainHandItem().is(Items.IRON_SWORD), "a new guard should hold an iron sword");
+        TestFixtures.check(helper, guard.villagerLevel() == 1 && guard.getVillagerXp() == 0, "a new guard is a novice");
+        TestFixtures.check(helper, guard.getMainHandItem().is(Items.WOODEN_SWORD) || guard.getMainHandItem().is(Items.STONE_SWORD),
+                "a novice holds a wooden or stone sword, not " + guard.getMainHandItem());
+        TestFixtures.check(helper, guard.getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS)
+                && guard.getItemBySlot(EquipmentSlot.CHEST).isEmpty() && guard.getOffhandItem().isEmpty(),
+                "a novice wears leather boots, and no chestplate or shield");
+        TestFixtures.check(helper, !guard.isPlayerGear(EquipmentSlot.MAINHAND), "its sword is its own");
+        TestFixtures.check(helper, guard.getOffers().size() == 2, "a novice knows two trades, not " + guard.getOffers().size());
         TestFixtures.check(helper, guard.getMaxHealth() == 20.0F, "a guard has a villager's 20 health, not " + guard.getMaxHealth());
         TestFixtures.check(helper, !guard.removeWhenFarAway(1000.0), "guards never despawn");
         helper.succeed();
@@ -155,16 +167,16 @@ public final class GuardGameTest {
                 "a new guard should wear the clothes of its biome, " + biome + ", not " + guard.villagerType());
 
         guard.setVillagerType("minecraft:snow");
-        Map<String, String> saved = new HashMap<>();
-        guard.saveExtra(saved::put);
+        TestFixtures.MemorySave saved = new TestFixtures.MemorySave();
+        guard.saveExtra(saved);
         Guard reloaded = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
-        reloaded.loadExtra(saved::getOrDefault);
+        reloaded.loadExtra(saved);
         TestFixtures.check(helper, reloaded.villagerType().equals("minecraft:snow"), "the villager type should survive a reload");
 
         reloaded.setVillagerType("not an id!");
         TestFixtures.check(helper, reloaded.villagerType().equals("minecraft:snow"), "a guard ignores a villager type that is not an id");
         Guard old = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
-        old.loadExtra((key, fallback) -> fallback);
+        old.loadExtra(new TestFixtures.MemorySave());
         TestFixtures.check(helper, old.villagerType().equals(Guard.DEFAULT_VILLAGER_TYPE),
                 "a guard saved without a villager type should wear the plains' clothes");
         helper.succeed();
@@ -204,9 +216,20 @@ public final class GuardGameTest {
         TestFixtures.interact(guard, player, InteractionHand.MAIN_HAND);
         TestFixtures.check(helper, guard.getMainHandItem().is(Items.DIAMOND_SWORD), "the guard should take the diamond sword");
         TestFixtures.check(helper, !player.getInventory().contains(new ItemStack(Items.DIAMOND_SWORD)), "the player gave it away");
-        // Into the first free slot, which is the hand the diamond sword just left.
-        TestFixtures.check(helper, player.getInventory().contains(new ItemStack(Items.IRON_SWORD)),
-                "the player gets the old sword back");
+        TestFixtures.check(helper, !player.getInventory().contains(new ItemStack(Items.IRON_SWORD)),
+                "the guard's own sword is never the player's");
+        TestFixtures.check(helper, guard.ownGear(EquipmentSlot.MAINHAND).is(Items.IRON_SWORD), "it waits under the diamond one");
+
+        player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+        player.setShiftKeyDown(true);
+        TestFixtures.interact(guard, player, InteractionHand.MAIN_HAND);
+        TestFixtures.check(helper, player.getInventory().contains(new ItemStack(Items.DIAMOND_SWORD)), "the player takes the diamond sword back");
+        TestFixtures.check(helper, guard.getMainHandItem().is(Items.IRON_SWORD) && !guard.isPlayerGear(EquipmentSlot.MAINHAND),
+                "and the guard holds its own sword again");
+        // The sword came back into the empty hand; empty it again.
+        player.getInventory().clearContent();
+        TestFixtures.interact(guard, player, InteractionHand.MAIN_HAND);
+        TestFixtures.check(helper, guard.getMainHandItem().is(Items.IRON_SWORD), "its own sword never comes off");
         helper.succeed();
     }
 
@@ -440,6 +463,31 @@ public final class GuardGameTest {
         } finally {
             villages.removeAnchor(village, bell.asLong(), 0L);
         }
+        helper.succeed();
+    }
+
+    @GameTest
+    public void patrolAndMeetingPointsAreNeverOnWater(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        helper.setBlock(new BlockPos(5, 1, 5), Blocks.WATER);
+        TestFixtures.check(helper, Ground.onDryGround(helper.getLevel(), helper.absolutePos(new BlockPos(2, 2, 2))),
+                "stone is dry ground");
+        TestFixtures.check(helper, !Ground.onDryGround(helper.getLevel(), helper.absolutePos(new BlockPos(5, 2, 5))),
+                "the top of water is not ground to stand on");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aGuardGoesForTheNearestRaider(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        net.minecraft.world.entity.raid.Raider far = (net.minecraft.world.entity.raid.Raider) helper.spawnWithNoFreeWill(TestFixtures.vindicator(), new BlockPos(7, 2, 7));
+        net.minecraft.world.entity.raid.Raider near = (net.minecraft.world.entity.raid.Raider) helper.spawnWithNoFreeWill(TestFixtures.vindicator(), new BlockPos(3, 2, 1));
+        TestFixtures.check(helper, com.civillagers.ai.guard.GuardRaidGoal.nearestRaider(guard, List.of(far, near)) == near,
+                "a guard goes for the raider nearest it, wherever the raid's center is");
+        near.discard();
+        TestFixtures.check(helper, com.civillagers.ai.guard.GuardRaidGoal.nearestRaider(guard, List.of(far, near)) == far,
+                "and for the next once that one is gone");
         helper.succeed();
     }
 

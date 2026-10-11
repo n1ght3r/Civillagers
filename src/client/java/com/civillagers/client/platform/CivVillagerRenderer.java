@@ -38,6 +38,7 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
     public CivVillagerRenderer(EntityRendererProvider.Context context) {
         super(context, new CivVillagerModel(context.bakeLayer(CivVillagerModelLayers.BODY)), 0.5F);
         addLayer(new Clothes(this));
+        addLayer(new Badge(this, new CivVillagerModel(context.bakeLayer(CivVillagerModelLayers.BODY), true)));
         addLayer(new HumanoidArmorLayer<>(this,
                 net.minecraft.client.renderer.entity.ArmorModelSet.<HumanoidModel<State>>bake(
                         ARMOR, context.getModelSet(), HumanoidModel::new),
@@ -71,6 +72,7 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
         super.extractRenderState(villager, state, partialTick);
         state.clothes = CivVillagerModelLayers.clothes(villager.villagerType());
         state.unhappy = villager.isUnhappy();
+        state.badge = CivVillagerModelLayers.badge(villager.villagerLevel());
     }
 
     @Override
@@ -88,9 +90,10 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
         return new ModelLayerLocation(Civillagers.id("villager"), slot);
     }
 
-    /** What a villager's model is drawn from: a humanoid's, the clothes it wears, and whether it is saying no. */
+    /** What a villager's model is drawn from: a humanoid's, the clothes it wears, the badge of its level (null for none) and whether it is saying no. */
     public static class State extends net.minecraft.client.renderer.entity.state.HumanoidRenderState {
         public Identifier clothes = CivVillagerModelLayers.clothes(CivVillager.DEFAULT_VILLAGER_TYPE);
+        public Identifier badge;
         public boolean unhappy;
     }
 
@@ -107,6 +110,24 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
             renderColoredCutoutModel(getParentModel(), state.clothes, poseStack, collector, light, state, -1, 1);
         }
     }
+
+    /** The badge of the villager's level on its belt, drawn over the clothes as a villager's is, and over armor. */
+    private static final class Badge extends RenderLayer<State, CivVillagerModel> {
+        /** A copy of the model whose robe shows over leggings, so the badge does too. */
+        private final CivVillagerModel model;
+
+        Badge(RenderLayerParent<State, CivVillagerModel> parent, CivVillagerModel model) {
+            super(parent);
+            this.model = model;
+        }
+
+        @Override
+        public void submit(com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.SubmitNodeCollector collector,
+                           int light, State state, float yRot, float xRot) {
+            if (state.isInvisible || state.badge == null) return;
+            renderColoredCutoutModel(model, state.badge, poseStack, collector, light, state, -1, 2);
+        }
+    }
 }
 //?} else {
 /*public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRenderer<T, CivVillagerModel<T>> {
@@ -116,6 +137,7 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
     public CivVillagerRenderer(EntityRendererProvider.Context context) {
         super(context, new CivVillagerModel<>(context.bakeLayer(CivVillagerModelLayers.BODY)), 0.5F);
         addLayer(new Clothes<>(this));
+        addLayer(new Badge<>(this, new CivVillagerModel<>(context.bakeLayer(CivVillagerModelLayers.BODY), true)));
         addLayer(new HumanoidArmorLayer<>(this, new ArmorModel<>(context.bakeLayer(INNER_ARMOR)),
                 new ArmorModel<>(context.bakeLayer(OUTER_ARMOR)), context.getModelManager()));
     }
@@ -166,6 +188,28 @@ public class CivVillagerRenderer<T extends CivVillager> extends HumanoidMobRende
             if (villager.isInvisible()) return;
             renderColoredCutoutModel(getParentModel(), CivVillagerModelLayers.clothes(villager.villagerType()), poseStack, buffer,
                     light, villager, -1);
+        }
+    }
+
+    /^* The badge of the villager's level on its belt, drawn over the clothes as a villager's is, and over armor. ^/
+    private static final class Badge<T extends CivVillager> extends RenderLayer<T, CivVillagerModel<T>> {
+        /^* A copy of the model whose robe shows over leggings, so the badge does too. ^/
+        private final CivVillagerModel<T> model;
+
+        Badge(RenderLayerParent<T, CivVillagerModel<T>> parent, CivVillagerModel<T> model) {
+            super(parent);
+            this.model = model;
+        }
+
+        @Override
+        public void render(com.mojang.blaze3d.vertex.PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource buffer,
+                           int light, T villager, float limbSwing, float limbSwingAmount, float partialTick,
+                           float ageInTicks, float netHeadYaw, float headPitch) {
+            Identifier badge = CivVillagerModelLayers.badge(villager.villagerLevel());
+            if (villager.isInvisible() || badge == null) return;
+            // Posed as the villager is; the robe's visibility is not copied, so it stays shown.
+            getParentModel().copyPropertiesTo(model);
+            renderColoredCutoutModel(model, badge, poseStack, buffer, light, villager, -1);
         }
     }
 }
