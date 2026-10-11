@@ -32,6 +32,9 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
  * that is empty fills with the chance it gains between the two levels, and a material keeps its place in
  * the order of the old column, drawn again inside that place, and reads off the new column there.
  *
+ * <p>One new guard in seven holds a bow instead of a sword and the shield table, and as many a crossbow
+ * ({@link #rollRanged}).
+ *
  * <p>Every piece is unbreakable for now: a guard's gear does not wear out.
  */
 public final class GuardGear {
@@ -58,7 +61,29 @@ public final class GuardGear {
     };
     private static final int[][] ONE_MATERIAL = { { 100 }, { 100 }, { 100 }, { 100 }, { 100 } };
 
+    /** In percent, at every level: how often a new guard is an archer, with a bow, and with a crossbow. */
+    public static final int BOW_CHANCE = 15;
+    public static final int CROSSBOW_CHANCE = 15;
+
     private GuardGear() { }
+
+    /**
+     * A new guard's own bow ({@link #BOW_CHANCE}) or crossbow ({@link #CROSSBOW_CHANCE}), unbreakable, or
+     * an empty stack for a guard who fights with a sword from {@link #roll}. An archer has no shield: both
+     * its hands are for the bow, and a level-up never gives it one. Its bow stays as it is through the
+     * levels, as a piece that is not in the tables does.
+     */
+    public static ItemStack rollRanged(RandomSource random) {
+        int roll = random.nextInt(100);
+        if (roll < BOW_CHANCE) return own(Items.BOW);
+        if (roll < BOW_CHANCE + CROSSBOW_CHANCE) return own(Items.CROSSBOW);
+        return ItemStack.EMPTY;
+    }
+
+    /** Whether {@code stack} is a bow or a crossbow. */
+    public static boolean isRanged(ItemStack stack) {
+        return stack.is(Items.BOW) || stack.is(Items.CROSSBOW);
+    }
 
     /** The guard's own gear in {@code slot} for a new guard of {@code level}, rolled from the tables; empty if it has none there. */
     public static ItemStack roll(EquipmentSlot slot, int level, RandomSource random, RegistryAccess registries) {

@@ -2,10 +2,12 @@ package com.civillagers.entity.guard;
 
 import com.civillagers.ai.guard.GuardBowGoal;
 import com.civillagers.ai.guard.GuardCrossbowGoal;
+import com.civillagers.ai.guard.GuardHurtByTargetGoal;
 import com.civillagers.ai.guard.GuardMeleeGoal;
 import com.civillagers.ai.guard.GuardPatrolGoal;
 import com.civillagers.ai.guard.GuardRaidGoal;
 import com.civillagers.ai.guard.GuardRallyGoal;
+import com.civillagers.ai.guard.GuardRetargetGoal;
 import com.civillagers.ai.guard.GuardShieldGoal;
 import com.civillagers.ai.guard.GuardSleepGoal;
 import com.civillagers.ai.guard.GuardTargetGoal;
@@ -36,6 +38,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityEvent;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -47,7 +50,6 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
 import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
@@ -73,6 +75,7 @@ import net.minecraft.world.phys.AABB;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Predicate;
 
 /**
@@ -159,6 +162,20 @@ public class Guard extends CivVillager implements Merchant {
     private static final double BASE_ATTACK_SPEED = 4.0;
     /** Ticks of regeneration a new level gives, as it gives a villager. */
     private static final int LEVEL_UP_REGENERATION = 200;
+    /** How far a mob's strike reaches beyond its own box, horizontally: vanilla's default reach. */
+    private static final double MELEE_REACH = Math.sqrt(2.04) - 0.6;
+    /** How far up and down a guard reaches in water: afloat, its feet ride above a mob standing on the bottom. */
+    public static final double WATER_REACH = 1.5;
+    /** The fewest ticks between two changes of target, so a guard never flicks between two mobs. */
+    public static final int RETARGET_COOLDOWN = 40;
+    /**
+     * Another mob takes the target's place only when it scores below this share of the target's score,
+     * both squared distances: about a third nearer. The margin keeps two mobs at much the same distance
+     * from trading places.
+     */
+    public static final double RETARGET_SHARE = 0.5;
+    /** Ticks a guard leaves alone a target it gave up on, one it could not reach. */
+    public static final int GIVE_UP_TICKS = 200;
 
     private static final String LEVEL_KEY = "level";
     private static final String XP_KEY = "xp";
@@ -180,6 +197,11 @@ public class Guard extends CivVillager implements Merchant {
     private long lastRestock;
     /** The tick count from which the guard may strike again; kept here so a fight that starts over cannot strike sooner. */
     private int nextStrike;
+    /** The tick count of its last change of target. */
+    private int lastRetarget = Integer.MIN_VALUE / 2;
+    /** The one mob it gave up on, as out of reach, and the tick count until which it leaves it alone; never saved. */
+    private UUID givenUp;
+    private int givenUpUntil;
     /** The center and radius of the village the guard last stood in: its home, which it keeps to. No home: radius 0. */
     private long homeCenter;
     private int homeRadius;
@@ -219,9 +241,11 @@ public class Guard extends CivVillager implements Merchant {
 
         // Guards never take offence at their own, the villagers they protect or the golems beside them,
         // and call the guards nearby when something else hurts one of them.
-        targetSelector.addGoal(1, new HurtByTargetGoal(this, Guard.class, Villager.class, IronGolem.class)
+        targetSelector.addGoal(1, new GuardHurtByTargetGoal(this, Guard.class, Villager.class, IronGolem.class)
                 .setAlertOthers(Guard.class));
         targetSelector.addGoal(2, new GuardTargetGoal(this));
+        // No flags, so it runs beside whichever goal set the target.
+        targetSelector.addGoal(3, new GuardRetargetGoal(this));
     }
 
     /** A guard fights while it holds a weapon ({@link CivTags#GUARD_WEAPONS}); without one it is a civilian. */
@@ -290,8 +314,8 @@ public class Guard extends CivVillager implements Merchant {
             double nearestDistance = Double.MAX_VALUE;
             for (int i = 0; i < mobs.size(); i++) {
                 Mob mob = mobs.get(i);
-                if (mob == null || !goesAfter(mob, ranged)) continue;
-                double distance = distanceToSqr(mob) * (attacksVillager(mob) ? DEFENDS_VILLAGERS : 1.0);
+                if (mob == null || gaveUpOn(mob) || !goesAfter(mob, ranged)) continue;
+                double distance = targetScore(mob);
                 if (distance < nearestDistance) {
                     nearest = mob;
                     nearestDistance = distance;
@@ -302,6 +326,53 @@ public class Guard extends CivVillager implements Merchant {
             mobs.set(mobs.indexOf(nearest), null);
         }
         return null;
+    }
+
+    /**
+     * How near {@code entity} counts as, for picking a target: its squared distance, and a quarter of it
+     * for a mob going after a villager, so the guard defends the villagers first.
+     */
+    public double targetScore(LivingEntity entity) {
+        return distanceToSqr(entity) * (entity instanceof Mob mob && attacksVillager(mob) ? DEFENDS_VILLAGERS : 1.0);
+    }
+
+    /**
+     * Whether the guard should drop {@code current} for {@code candidate}: a living one it has not given
+     * up on, and clearly nearer ({@link #RETARGET_SHARE}), or the only one left. Says nothing of when; see
+     * {@link #mayRetarget()}.
+     */
+    public boolean prefers(LivingEntity candidate, LivingEntity current) {
+        if (candidate == null || candidate == current || !candidate.isAlive() || gaveUpOn(candidate)) return false;
+        if (current == null || !current.isAlive()) return true;
+        return targetScore(candidate) < targetScore(current) * RETARGET_SHARE;
+    }
+
+    /** Whether {@link #RETARGET_COOLDOWN} ticks have gone by since its last change of target. */
+    public boolean mayRetarget() {
+        return tickCount - lastRetarget >= RETARGET_COOLDOWN;
+    }
+
+    /** Notes when the target changes, for {@link #mayRetarget()}. */
+    @Override
+    public void setTarget(LivingEntity target) {
+        if (target != null && target != getTarget()) lastRetarget = tickCount;
+        super.setTarget(target);
+    }
+
+    /**
+     * Gives up on {@code target}, one it cannot reach: lets go of it and leaves it alone for
+     * {@link #GIVE_UP_TICKS}.
+     */
+    public void giveUp(LivingEntity target) {
+        givenUp = target.getUUID();
+        givenUpUntil = tickCount + GIVE_UP_TICKS;
+        if (getTarget() == target) setTarget(null);
+        getNavigation().stop();
+    }
+
+    /** Whether the guard gave up on {@code entity} within the last {@link #GIVE_UP_TICKS}. */
+    public boolean gaveUpOn(Entity entity) {
+        return givenUp != null && tickCount < givenUpUntil && entity != null && givenUp.equals(entity.getUUID());
     }
 
     /** Whether {@code mob} is going after a villager, or a villager of the mod that does not fight. */
@@ -372,6 +443,17 @@ public class Guard extends CivVillager implements Merchant {
     }
 
     // Weapons.
+
+    /**
+     * Vanilla's reach, and in water some more up and down ({@link #WATER_REACH}): a guard afloat strikes a
+     * mob on the bottom beneath it, as a player would, rather than hovering over it out of reach.
+     */
+    @Override
+    public boolean isWithinMeleeAttackRange(LivingEntity target) {
+        if (super.isWithinMeleeAttackRange(target)) return true;
+        if (!isInWater() && !target.isInWater()) return false;
+        return getBoundingBox().inflate(MELEE_REACH, WATER_REACH, MELEE_REACH).intersects(target.getBoundingBox());
+    }
 
     /**
      * Ticks between two strikes with what the main hand holds: {@link #SWORD_STRIKE_INTERVAL} with a sword,
@@ -477,7 +559,10 @@ public class Guard extends CivVillager implements Merchant {
         int from = villagerLevel();
         if (from >= MAX_LEVEL) return;
         MerchantOffers known = getOffers();
+        boolean ranged = GuardGear.isRanged(ownGear(EquipmentSlot.MAINHAND));
         for (EquipmentSlot slot : GuardGear.SLOTS) {
+            // An archer keeps both hands for its bow: its own gear never has a shield.
+            if (ranged && slot == EquipmentSlot.OFFHAND) continue;
             setOwnGear(slot, GuardGear.upgrade(slot, ownGear(slot), from, getRandom(), registryAccess()));
         }
         setVillagerLevel(from + 1);
@@ -763,10 +848,18 @@ public class Guard extends CivVillager implements Merchant {
         return result;
     }
 
-    /** A new guard's own gear for its level, rolled from {@link GuardGear}'s tables. */
+    /**
+     * A new guard's own gear for its level, rolled from {@link GuardGear}'s tables: a sword and maybe a
+     * shield, or a bow or a crossbow ({@link GuardGear#rollRanged}) and no shield.
+     */
     @Override
     protected void populateDefaultEquipmentSlots(RandomSource random, DifficultyInstance difficulty) {
-        for (EquipmentSlot slot : GuardGear.SLOTS) setOwnGear(slot, GuardGear.roll(slot, villagerLevel(), random, registryAccess()));
+        ItemStack ranged = GuardGear.rollRanged(random);
+        for (EquipmentSlot slot : GuardGear.SLOTS) {
+            boolean hands = slot == EquipmentSlot.MAINHAND || slot == EquipmentSlot.OFFHAND;
+            if (ranged.isEmpty() || !hands) setOwnGear(slot, GuardGear.roll(slot, villagerLevel(), random, registryAccess()));
+            else setOwnGear(slot, slot == EquipmentSlot.MAINHAND ? ranged : ItemStack.EMPTY);
+        }
     }
 
     @Override

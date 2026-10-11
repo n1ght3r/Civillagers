@@ -38,6 +38,14 @@
 - A guard's own gear never drops (from it or from its zombie) and never wears out; a piece a player hands
   over goes on top of it, always drops, and is the one piece the player can take back. A zombie guard keeps
   its level, experience and trades through the cure.
+- Guards fight better in and by water: they swim straight at a
+  target they see instead of turning round and round on the spot, step in from the shore after it, and
+  reach a mob on the bottom of shallow water beneath them. A target a guard cannot get nearer to in 5
+  seconds, it gives up on for a while.
+- Guards turn on a clearly nearer mob, such as a vindicator hitting them while they chase an archer, but
+  no more often than every 2 seconds, and a hit from far off no longer pulls them away from the mob
+  beside them.
+- 15% of new guards (from a spawn egg or otherwise) hold a bow and 15% a crossbow; those have no shield.
 - Guards keep out of water: patrol and meeting points are on dry ground only, and paths go round water.
 - Guards strike once a second with a sword, as vanilla's mobs do, and slower with an axe, a trident or a
   mace; changing targets no longer lets them strike sooner.

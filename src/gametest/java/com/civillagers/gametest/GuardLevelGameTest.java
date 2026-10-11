@@ -304,6 +304,41 @@ public final class GuardLevelGameTest {
         helper.succeed();
     }
 
+    @GameTest
+    public void someNewGuardsAreArchersWithNoShield(GameTestHelper helper) {
+        RandomSource random = RandomSource.create(11L);
+        checkShare(helper, "a new guard's bow", GuardGear.BOW_CHANCE / 100.0, ROLLS, i -> GuardGear.rollRanged(random).is(Items.BOW));
+        checkShare(helper, "a new guard's crossbow", GuardGear.CROSSBOW_CHANCE / 100.0, ROLLS, i -> GuardGear.rollRanged(random).is(Items.CROSSBOW));
+
+        // Guards from spawn eggs, at every level: an archer never has a shield of its own.
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        int archers = 0;
+        int shields = 0;
+        for (int i = 0; i < 300; i++) {
+            guard.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(guard.blockPosition()),
+                    EntitySpawnReason.DISPENSER, null);
+            if (GuardGear.isRanged(guard.getMainHandItem())) {
+                archers++;
+                TestFixtures.check(helper, guard.getOffhandItem().isEmpty(), "an archer holds no shield, not " + guard.getOffhandItem());
+                TestFixtures.check(helper, !guard.isPlayerGear(EquipmentSlot.MAINHAND), "and its bow is its own");
+            } else if (!guard.getOffhandItem().isEmpty()) {
+                shields++;
+            }
+        }
+        TestFixtures.check(helper, archers > 40 && archers < 140, "about 3 eggs in 10 make an archer, not " + archers + " in 300");
+        TestFixtures.check(helper, shields > 0, "a guard with a sword still has a shield now and then");
+
+        // Up to master, an archer keeps its bow and never gains a shield.
+        guard.setVillagerLevel(1);
+        guard.setOwnGear(EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
+        guard.setOwnGear(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+        for (int level = 1; level < Guard.MAX_LEVEL; level++) guard.levelUp();
+        TestFixtures.check(helper, guard.getMainHandItem().is(Items.CROSSBOW) && guard.getOffhandItem().isEmpty(),
+                "a master archer still holds its crossbow and no shield, not " + guard.getMainHandItem() + " and " + guard.getOffhandItem());
+        helper.succeed();
+    }
+
     /** Checks that {@code hits} out of {@link #ROLLS} is within {@link #TOLERANCE} of {@code expected}. */
     private static void checkShare(GameTestHelper helper, String what, double expected, int hits) {
         double share = hits / (double) ROLLS;

@@ -109,14 +109,14 @@ public final class GuardRaidGoal extends Goal {
 
     /**
      * The raider of {@code raiders} the guard goes for, or null: a living one in its level, inside its home
-     * village or within {@link #ENGAGE_RANGE} of it, the nearest, a raider going after a villager counting
-     * as half as far. Public for the gametests.
+     * village or within {@link #ENGAGE_RANGE} of it, not one it just gave up on as out of reach; the
+     * nearest, a raider going after a villager counting as half as far. Public for the gametests.
      */
     public static Raider nearestRaider(Guard guard, Iterable<? extends Raider> raiders) {
         Raider nearest = null;
         double nearestScore = Double.MAX_VALUE;
         for (Raider raider : raiders) {
-            if (!raider.isAlive() || raider.level() != guard.level() || raider.isInvisible()) continue;
+            if (!raider.isAlive() || raider.level() != guard.level() || raider.isInvisible() || guard.gaveUpOn(raider)) continue;
             double distance = guard.distanceToSqr(raider);
             boolean close = distance <= ENGAGE_RANGE * ENGAGE_RANGE;
             if (!close && (!guard.hasHome() || !guard.nearHome(raider.getX(), raider.getZ(), 0.0))) continue;

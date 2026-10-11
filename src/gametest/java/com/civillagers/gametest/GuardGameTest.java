@@ -10,6 +10,7 @@ import com.civillagers.ai.guard.GuardTargetGoal;
 import com.civillagers.entity.CivEntities;
 import com.civillagers.entity.ZombieVillagers;
 import com.civillagers.entity.guard.Guard;
+import com.civillagers.entity.guard.GuardGear;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.village.Village;
 import com.civillagers.village.Villages;
@@ -144,12 +145,13 @@ public final class GuardGameTest {
         guard.finalizeSpawn(helper.getLevel(), helper.getLevel().getCurrentDifficultyAt(guard.blockPosition()),
                 EntitySpawnReason.MOB_SUMMONED, null);
         TestFixtures.check(helper, guard.villagerLevel() == 1 && guard.getVillagerXp() == 0, "a new guard is a novice");
-        TestFixtures.check(helper, guard.getMainHandItem().is(Items.WOODEN_SWORD) || guard.getMainHandItem().is(Items.STONE_SWORD),
-                "a novice holds a wooden or stone sword, not " + guard.getMainHandItem());
+        TestFixtures.check(helper, guard.getMainHandItem().is(Items.WOODEN_SWORD) || guard.getMainHandItem().is(Items.STONE_SWORD)
+                || GuardGear.isRanged(guard.getMainHandItem()),
+                "a novice holds a wooden or stone sword, a bow or a crossbow, not " + guard.getMainHandItem());
         TestFixtures.check(helper, guard.getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS)
                 && guard.getItemBySlot(EquipmentSlot.CHEST).isEmpty() && guard.getOffhandItem().isEmpty(),
                 "a novice wears leather boots, and no chestplate or shield");
-        TestFixtures.check(helper, !guard.isPlayerGear(EquipmentSlot.MAINHAND), "its sword is its own");
+        TestFixtures.check(helper, !guard.isPlayerGear(EquipmentSlot.MAINHAND), "its weapon is its own");
         TestFixtures.check(helper, guard.getOffers().size() == 2, "a novice knows two trades, not " + guard.getOffers().size());
         TestFixtures.check(helper, guard.getMaxHealth() == 20.0F, "a guard has a villager's 20 health, not " + guard.getMaxHealth());
         TestFixtures.check(helper, !guard.removeWhenFarAway(1000.0), "guards never despawn");

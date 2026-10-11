@@ -7,7 +7,7 @@ What the mod's villagers do, one `Goal` per behaviour on vanilla's `GoalSelector
 |---|---|
 | `ai/` | What every goal leans on: `GuardPathBudget` (new paths per server tick), `Homes` (beds, from vanilla's points of interest), `Ground` (where a villager may stand) |
 | `ai/villager/` | What every villager of the mod does as a villager does (`Civ*Goal`): panic, hide, meet, celebrate. [villager-life.md](../../../../../../docs/knowledge/villager-life.md) |
-| `ai/guard/` | A guard's own (`Guard*`): patrol, sleep, raid, rally, target scan, melee, bow, crossbow, shield, trading; its chase paths (`GuardCombatPath`) and who hunts guards (`GuardEnemies`). [guard.md](../../../../../../docs/knowledge/guard.md) |
+| `ai/guard/` | A guard's own (`Guard*`): patrol, sleep, raid, rally, target scan, changing target, being hurt, melee, bow, crossbow, shield, trading; its chase paths and swimming (`GuardCombatPath`) and who hunts guards (`GuardEnemies`). [guard.md](../../../../../../docs/knowledge/guard.md) |
 
 A goal for a new role goes in a package of its own beside `guard/`; one every role shares goes in
 `villager/`; a helper two packages need goes here, never in one of them (a villager goal never imports a

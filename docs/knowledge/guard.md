@@ -20,9 +20,11 @@ covers only what makes it a guard.
   guard runs slower than a vindicator (0.35); a master always outruns one. Each villager of the mod has a
   pace of its own, up to 5% faster or slower, drawn once and saved: a quick expert may outrun a
   vindicator, but no master falls behind one.
-  An unarmed guard flees at a villager's 0.375.
+  An unarmed guard flees at a villager's 0.375. In water it swims at the pace of vanilla's mobs, which
+  is slow; it has no depth strider of its own.
 - **Spawns** from the Villager Guard Spawn Egg at a random level, 1 to 5, with that level's gear, trades
-  and experience; `/summon` makes a novice. Never despawns. Counts as MISC, like villagers, so it never
+  and experience; `/summon` makes a novice. 15% of new guards hold a bow and 15% a crossbow instead of a
+  sword, and those never have a shield. Never despawns. Counts as MISC, like villagers, so it never
   fills the monster cap.
 - **Gear** is of two kinds. *Its own*: what its level gives it ([below](#gear-by-level)); it never drops
   (from the guard or its [zombie](zombie-guard.md)), never wears out (unbreakable), and nobody takes it
@@ -52,6 +54,17 @@ covers only what makes it a guard.
 - **Fights** hostile mobs it sees within 16 blocks, and whatever hurts it; calls nearby guards when hurt.
   Leaves neutral mobs alone, and creepers to guards with a bow or crossbow; an addon can change that
   (`GuardEvents.IS_THREAT`). Raises its shield against archers and against a creeper about to blow.
+- **Changes target** to a clearly nearer mob (about a third nearer, a mob after a villager counting as
+  half as far): once a second it looks again at what it sees and at what last hurt it. Never within 2 s
+  (40 ticks) of its last change, and never for a mob at much the same distance, so it does not flick
+  between two. A blow alone no longer turns it: a guard fighting a vindicator beside it is not pulled off
+  by every arrow from a pillager far behind.
+- **In water** it swims straight at a target it sees within 12 blocks, rather than following a path whose
+  nodes sit on the surface (it drifted off them and turned round and round). From the shore it steps
+  straight in after a target within 4 blocks. Afloat it reaches 1.5 blocks up and down, so it strikes a
+  mob on the bottom of shallow water beneath it.
+- **Gives up** on a target it has come no nearer to by a block in 5 s (100 ticks) without striking it (a
+  zombie on the bottom of deep water, a mob on a pillar), and leaves that one alone for 10 s.
 - **Is hunted** by zombies and fighting raiders, before the villagers. A zombie that kills it may turn it
   into a [zombie guard](zombie-guard.md).
 - **Idles** with no player within 48 blocks: no patrol, no looking around, fewer target scans, and at
@@ -94,6 +107,9 @@ Rolled from these tables, in percent, for a new guard of that level:
 | 4 | 100 | 100 | 100 | 100 | 75 | 0 / 0 / 100 / 0 | 0 / 0 / 90 / 10 | 20 |
 | 5 | 100 | 100 | 100 | 100 | 95 | 0 / 0 / 75 / 25 | 0 / 0 / 60 / 40 | 50 |
 
+An archer (a bow or a crossbow, [above](#in-game)) rolls the armor table but no sword and no shield; its
+bow stays as it is through the levels, and it never gains a shield.
+
 A guard that **levels up** does not roll again: it upgrades what it has, so a piece is never lost,
 swapped for a worse one or stripped of its enchantments, and the odds above still hold at every level.
 An empty slot fills with the chance it gains between the two levels; a material keeps its place in the
@@ -129,14 +145,14 @@ The buys are bounties on what the monsters it fights drop; the sells are the gea
 | Trade pools | [entity/guard/GuardTrades.java](../../src/main/java/com/civillagers/entity/guard/GuardTrades.java) |
 | What it shares with every villager of the mod | [entity/CivVillager.java](../../src/main/java/com/civillagers/entity/CivVillager.java), see [civ-villager.md](civ-villager.md) |
 | Registration, spawn egg | [entity/CivEntities.java](../../src/main/java/com/civillagers/entity/CivEntities.java) |
-| Goals: patrol, sleep, raid (hunting the raiders), target scan, melee, bow, crossbow, shield, trading | [ai/](../../src/main/java/com/civillagers/ai) |
+| Goals: patrol, sleep, raid (hunting the raiders), target scan, changing target, being hurt, melee (and giving up), bow, crossbow, shield, trading | [ai/](../../src/main/java/com/civillagers/ai) |
 | Experience from a guard's kill | `mixin/LivingEntityMixin`, at the head of `dropExperience`, which every death goes through |
-| Path budget in a fight | `ai/guard/GuardCombatPath`, `ai/GuardPathBudget` |
+| Path budget in a fight, swimming straight in water | `ai/guard/GuardCombatPath`, `ai/GuardPathBudget` |
 | Who hunts guards | `ai/guard/GuardEnemies`, called from `mixin/MobMixin` |
 | Cost per tick, for the benchmark | `entity/guard/GuardStats` |
 | Model, renderer, clothes and badge layers (shared) | `client/render/CivVillagerModelLayers`, `client/platform/CivVillagerModel`, `client/platform/CivVillagerRenderer` |
 | Hooks for addons | `api/GuardEvents`, `api/CivTags`, see [addon-api.md](addon-api.md) |
-| Tests | [GuardGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardGameTest.java), [GuardLevelGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardLevelGameTest.java), `tools/agent/shots/guards.jsonl` |
+| Tests | [GuardGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardGameTest.java), [GuardLevelGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardLevelGameTest.java), [GuardCombatGameTest.java](../../src/gametest/java/com/civillagers/gametest/GuardCombatGameTest.java), `tools/agent/shots/guards.jsonl` |
 
 **Which gear is whose** is the slot's drop chance: 0 for the guard's own, 2 (always drops) for a
 player's. Vanilla saves it and a zombie villager keeps it through turning and the cure, so the guard

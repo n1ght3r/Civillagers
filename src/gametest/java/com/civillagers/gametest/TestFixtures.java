@@ -160,6 +160,43 @@ final class TestFixtures {
         }
     }
 
+    /**
+     * Runs {@code mobs} through up to {@code ticks} ticks of their own, at once, as the level would tick
+     * them, after each calling {@code each} and stopping once {@code done} holds. Returns the ticks it took,
+     * or -1 if {@code done} never held. A test has 20 ticks of the server (Fabric API's default, and the
+     * NeoForge harness's), too few for a chase, so a test of one ticks the mobs itself. The game time
+     * stands still meanwhile, so the guards' path budget is given back every tick.
+     */
+    static int simulate(int ticks, java.util.function.BooleanSupplier done, Runnable each, Mob... mobs) {
+        for (int t = 1; t <= ticks; t++) {
+            com.civillagers.ai.GuardPathBudget.clear();
+            for (Mob mob : mobs) {
+                if (!mob.isAlive()) continue;
+                mob.setOldPosAndRot();
+                mob.tickCount++;
+                mob.tick();
+            }
+            each.run();
+            if (done.getAsBoolean()) return t;
+        }
+        return -1;
+    }
+
+    /**
+     * Lays out a pool across the test's patch: stone at {@code y} 0, water {@code depth} deep over the
+     * columns {@code x0} to {@code x1} (1 to 6) and {@code z} 1 to 6, and stone level with its top all
+     * round it, so a mob on the bank stands at {@code depth + 1}.
+     */
+    static void pool(GameTestHelper helper, int x0, int x1, int depth) {
+        for (int x = 0; x < 8; x++) {
+            for (int z = 0; z < 8; z++) {
+                helper.setBlock(new BlockPos(x, 0, z), Blocks.STONE);
+                boolean water = x >= x0 && x <= x1 && z >= 1 && z <= 6;
+                for (int y = 1; y <= depth; y++) helper.setBlock(new BlockPos(x, y, z), water ? Blocks.WATER : Blocks.STONE);
+            }
+        }
+    }
+
     /** Places a bed facing north with its foot at {@code foot}, on stone. Returns the head, where its POI is. */
     static BlockPos placeBed(GameTestHelper helper, BlockPos foot) {
         BlockState bed = anyBed().defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, Direction.NORTH);
