@@ -4,6 +4,7 @@ import com.civillagers.ai.villager.CivCelebrateGoal;
 import com.civillagers.ai.villager.CivHideGoal;
 import com.civillagers.ai.villager.CivMeetGoal;
 import com.civillagers.ai.villager.CivPanicGoal;
+import com.civillagers.Civillagers;
 import com.civillagers.api.CivVillagerEvents;
 import com.civillagers.platform.SavingMob;
 import com.civillagers.platform.Vanilla;
@@ -22,6 +23,8 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
@@ -59,6 +62,8 @@ import java.util.List;
  *       ({@link CivPanicGoal}), and hides at home when the bell rings or a raid comes
  *       ({@link CivHideGoal}), as a villager does. A combatant stands its ground; its role decides what
  *       it does instead.</li>
+ *   <li><b>Pace</b>: a villager's speed, each with its own pace up to {@link #SPEED_VARIANT_RANGE}
+ *       thousandths faster or slower than the others, drawn once and saved.</li>
  *   <li><b>Villager type</b>: taken from the biome it spawns in, saved and synced, so clients draw its
  *       clothes. See docs/knowledge/villager-type.md.</li>
  *   <li><b>Idles</b> with no player within {@link #ACTIVE_RANGE}: the look-around goals stop, and while
@@ -91,6 +96,12 @@ public abstract class CivVillager extends SavingMob {
     public static final int ALARM_TICKS = 300;
     /** What a step into water costs a path; its edge keeps vanilla's cost, so banks and bridges stay walkable. */
     private static final float WATER_MALUS = 16.0F;
+    /** A villager's walking speed attribute, as vanilla's: 0.5, which a goal multiplies (0.5 to walk, 0.75 to flee). */
+    public static final double BASE_SPEED = 0.5;
+    /** How far each villager's own pace is from the others', at most, in thousandths: five percent either way. */
+    public static final int SPEED_VARIANT_RANGE = 50;
+    private static final String SPEED_VARIANT_KEY = "speed_variant";
+    private static final Identifier SPEED_VARIANT_ID = Civillagers.id("speed_variant");
     /** Ticks a villager shakes its head for. */
     private static final int UNHAPPY_TICKS = 40;
 
@@ -104,6 +115,8 @@ public abstract class CivVillager extends SavingMob {
     private static final EntityDataAccessor<Integer> UNHAPPY =
             SynchedEntityData.defineId(CivVillager.class, EntityDataSerializers.INT);
 
+    /** This villager's own pace, in thousandths above or below everyone's; drawn once, saved. */
+    private int speedVariant;
     /** The tick count from which to look for a player again, and whether the last look found one. */
     private int presenceCheckTick;
     private boolean playerNear = true;
@@ -124,13 +137,14 @@ public abstract class CivVillager extends SavingMob {
         // rather than wading: villagers keep out of water too.
         setPathfindingMalus(PathType.WATER, WATER_MALUS);
         setCanPickUpLoot(false);
+        setSpeedVariant(getRandom().nextInt(2 * SPEED_VARIANT_RANGE + 1) - SPEED_VARIANT_RANGE);
     }
 
     /** A villager's attributes: 20 health, its walking speed, and a 16 block follow range that also bounds path searches. */
     public static AttributeSupplier.Builder createVillagerAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.5)
+                .add(Attributes.MOVEMENT_SPEED, BASE_SPEED)
                 // A path search visits at most sixteen nodes per block of it.
                 .add(Attributes.FOLLOW_RANGE, 16.0);
     }
@@ -333,17 +347,43 @@ public abstract class CivVillager extends SavingMob {
         if (Identifier.tryParse(id) != null) entityData.set(VILLAGER_TYPE, id);
     }
 
+    // Pace.
+
+    /**
+     * This villager's own pace: {@code permille} thousandths faster (or slower, below 0) than everyone's,
+     * within {@link #SPEED_VARIANT_RANGE}, so no two walk quite alike. It applies to every move, walking or
+     * running, as a modifier of the speed attribute, which vanilla syncs to clients.
+     */
+    public void setSpeedVariant(int permille) {
+        speedVariant = Math.max(-SPEED_VARIANT_RANGE, Math.min(permille, SPEED_VARIANT_RANGE));
+        AttributeInstance speed = getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed == null) return;
+        speed.removeModifier(SPEED_VARIANT_ID);
+        if (speedVariant != 0) {
+            speed.addTransientModifier(new AttributeModifier(SPEED_VARIANT_ID, speedVariant / 1000.0,
+                    AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        }
+    }
+
+    /** This villager's own pace, in thousandths above or below everyone's. */
+    public int speedVariant() {
+        return speedVariant;
+    }
+
     // Public, as the gametests read and write them directly. A subclass that saves more calls super first.
     @Override
     public void saveExtra(Output output) {
         super.saveExtra(output);
         output.putString(VILLAGER_TYPE_KEY, villagerType());
+        output.putInt(SPEED_VARIANT_KEY, speedVariant);
     }
 
     @Override
     public void loadExtra(Input input) {
         super.loadExtra(input);
         setVillagerType(input.getString(VILLAGER_TYPE_KEY, DEFAULT_VILLAGER_TYPE));
+        // A villager saved before paces keeps the one it drew when it was made.
+        setSpeedVariant(input.getInt(SPEED_VARIANT_KEY, speedVariant));
     }
 
     // Spawning.

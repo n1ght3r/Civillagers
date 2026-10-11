@@ -18,7 +18,6 @@ import java.util.EnumSet;
  * A guard needs no arrows ({@link Guard#getProjectile}).
  */
 public final class GuardCrossbowGoal extends Goal {
-    private static final double SPEED = 0.6;
     /** Closer than a bow's: a crossbow bolt flies flatter but the guard waits to see its target first. */
     private static final float RANGE = 12.0F;
     private static final double RANGE_SQR = RANGE * RANGE;
@@ -87,7 +86,7 @@ public final class GuardCrossbowGoal extends Goal {
         boolean needsToMove = (guard.distanceToSqr(target) > RANGE_SQR || seeTime < SIGHT_BEFORE_CHARGING)
                 && state != State.CHARGED;
         if (needsToMove) {
-            path.follow(target, state == State.UNCHARGED ? SPEED : SPEED * 0.5);
+            path.follow(target, state == State.UNCHARGED ? guard.runSpeed() : guard.runSpeed() * 0.5);
         } else {
             guard.getNavigation().stop();
         }

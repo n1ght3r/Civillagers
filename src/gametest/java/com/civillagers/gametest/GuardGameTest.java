@@ -544,6 +544,31 @@ public final class GuardGameTest {
     }
 
     @GameTest
+    public void aGuardStrikesAtItsWeaponsPace(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        TestFixtures.check(helper, guard.strikeInterval() == Guard.SWORD_STRIKE_INTERVAL,
+                "a sword strikes every 20 ticks, as vanilla's mobs, not " + guard.strikeInterval());
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
+        TestFixtures.check(helper, guard.strikeInterval() > Guard.SWORD_STRIKE_INTERVAL,
+                "an axe strikes slower than a sword, not every " + guard.strikeInterval());
+
+        // A fight that starts over strikes no sooner.
+        guard.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        guard.struck();
+        com.civillagers.ai.guard.GuardMeleeGoal melee = new com.civillagers.ai.guard.GuardMeleeGoal(guard);
+        melee.start();
+        melee.stop();
+        melee.start();
+        TestFixtures.check(helper, !guard.mayStrike() && guard.ticksUntilStrike() == Guard.SWORD_STRIKE_INTERVAL,
+                "the wait after a strike survives the fight starting over");
+        guard.tickCount += Guard.SWORD_STRIKE_INTERVAL;
+        TestFixtures.check(helper, guard.mayStrike(), "and ends after its interval");
+        helper.succeed();
+    }
+
+    @GameTest
     public void aGuardFindsAFreeBed(GameTestHelper helper) {
         TestFixtures.floor(helper, 1);
         BlockPos head = helper.absolutePos(TestFixtures.placeBed(helper, new BlockPos(4, 2, 4)));

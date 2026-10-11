@@ -11,7 +11,16 @@ covers only what makes it a guard.
   the shield and the armor it carries. It wears the clothes of its [villager type](villager-type.md), and
   the badge of its [level](#levels) on its belt, as a villager does.
 - **Stats**: 20 health, as a villager has, at every level. Regains 1 health every 4 s (80 ticks) while it
-  has no target. Base attack 1; the weapon adds its own damage, as for a player.
+  has no target. Base attack 1; the weapon adds its own damage, as for a player. It strikes once a
+  second with a sword, as vanilla's mobs do, and slower with a slower weapon by its attack speed (about
+  1.6 to 2 s with an axe, 2.6 s with a mace); a fight that starts over never strikes sooner. Armor counts
+  as on a player: armor points, toughness, and netherite's knockback resistance (no other armor has any).
+- **Speed**: walks (patrol, bed, the meeting) at a villager's pace, 0.25. Runs (to a fight, a raid, the
+  bell, with a bow) faster with each level: 0.28, 0.30, 0.32, 0.34, and 0.37 for a master. Below master a
+  guard runs slower than a vindicator (0.35); a master always outruns one. Each villager of the mod has a
+  pace of its own, up to 5% faster or slower, drawn once and saved: a quick expert may outrun a
+  vindicator, but no master falls behind one.
+  An unarmed guard flees at a villager's 0.375.
 - **Spawns** from the Villager Guard Spawn Egg at a random level, 1 to 5, with that level's gear, trades
   and experience; `/summon` makes a novice. Never despawns. Counts as MISC, like villagers, so it never
   fills the monster cap.

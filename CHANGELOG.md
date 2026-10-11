@@ -39,6 +39,10 @@
   over goes on top of it, always drops, and is the one piece the player can take back. A zombie guard keeps
   its level, experience and trades through the cure.
 - Guards keep out of water: patrol and meeting points are on dry ground only, and paths go round water.
+- Guards strike once a second with a sword, as vanilla's mobs do, and slower with an axe, a trident or a
+  mace; changing targets no longer lets them strike sooner.
+- Guards run faster as they level up: a novice a little faster than a villager walks, and only a master
+  always faster than a vindicator. Every guard has a pace of its own, a little faster or slower than the others.
 - Guards keep to their village, as iron golems do: they give up a chase far past its edge and walk back.
   In a raid they meet the raiders in the village, going first for those attacking villagers, instead of
   gathering at the bell or running out to the raid. Zombies and raiders go for a guard before a villager.

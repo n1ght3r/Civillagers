@@ -34,7 +34,8 @@ public final class CivPanicGoal extends Goal {
     public static final int CHECK_INTERVAL = 10;
     /** The farthest anything is fled from, in blocks: a pillager's. */
     private static final double WATCH = 15.0;
-    private static final double SPEED = 0.8;
+    /** A villager's flight, as vanilla's: half its speed, times one and a half. */
+    private static final double SPEED = 0.75;
 
     /** The first filter on a look for danger; no capture, so no allocation. */
     private static final Predicate<Mob> DANGEROUS = mob -> mob.isAlive() && fleeDistance(mob) > 0;

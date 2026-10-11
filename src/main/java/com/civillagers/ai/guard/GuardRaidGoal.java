@@ -26,7 +26,6 @@ import java.util.EnumSet;
  * when the last ended or the raider moved on.
  */
 public final class GuardRaidGoal extends Goal {
-    private static final double SPEED = 0.7;
     /** A raider this close, in blocks, is the guard's target at once. */
     public static final double ENGAGE_RANGE = 16.0;
     /** Ticks between two looks at the raiders. */
@@ -79,7 +78,7 @@ public final class GuardRaidGoal extends Goal {
         if (repath > 0 && !guard.getNavigation().isDone()) return;
         if (!GuardPathBudget.tryTake(level.getGameTime())) return;
         repath = REPATH;
-        guard.getNavigation().moveTo(goal.getX() + 0.5, goal.getY(), goal.getZ() + 0.5, SPEED);
+        guard.getNavigation().moveTo(goal.getX() + 0.5, goal.getY(), goal.getZ() + 0.5, guard.runSpeed());
     }
 
     @Override

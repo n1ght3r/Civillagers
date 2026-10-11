@@ -44,6 +44,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -62,6 +63,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.item.component.ChargedProjectiles;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
@@ -142,6 +144,19 @@ public class Guard extends CivVillager implements Merchant {
     private static final int HOME_CHECK_INTERVAL = 20;
     /** A mob going after a villager counts as this much nearer, squared: a guard protects villagers first. */
     private static final double DEFENDS_VILLAGERS = 0.25;
+    /**
+     * How fast a guard runs (to a fight, a raid, the bell), by level, before its own pace: a novice a little
+     * faster than a villager walks (0.25), then faster each level. Every level below master runs slower
+     * than a vindicator (0.35) at its own pace's middle, though a quick one may outrun it; a master
+     * outruns one whatever its pace. Walking (patrol, bed, the meeting) is a villager's at every level.
+     */
+    private static final double[] RUN_SPEED = { 0.28, 0.28, 0.30, 0.32, 0.34, 0.37 };
+    /** Ticks between two strikes with a sword: the 20 of vanilla's mobs, a vindicator's and a zombie's. */
+    public static final int SWORD_STRIKE_INTERVAL = 20;
+    /** A sword's attack speed, as a player's: the speed the interval above stands for. */
+    private static final double SWORD_ATTACK_SPEED = 1.6;
+    /** A player's attack speed with an empty hand, which a weapon's modifier adds to. */
+    private static final double BASE_ATTACK_SPEED = 4.0;
     /** Ticks of regeneration a new level gives, as it gives a villager. */
     private static final int LEVEL_UP_REGENERATION = 200;
 
@@ -163,6 +178,8 @@ public class Guard extends CivVillager implements Merchant {
     private int levelUpIn;
     /** The game time of the last restock; 0 until the first look. */
     private long lastRestock;
+    /** The tick count from which the guard may strike again; kept here so a fight that starts over cannot strike sooner. */
+    private int nextStrike;
     /** The center and radius of the village the guard last stood in: its home, which it keeps to. No home: radius 0. */
     private long homeCenter;
     private int homeRadius;
@@ -355,6 +372,47 @@ public class Guard extends CivVillager implements Merchant {
     }
 
     // Weapons.
+
+    /**
+     * Ticks between two strikes with what the main hand holds: {@link #SWORD_STRIKE_INTERVAL} with a sword,
+     * as vanilla's mobs strike, and slower for a slower weapon by its attack speed, as a player's: about 32
+     * to 40 with an axe, 29 with a trident, 53 with a mace. Never faster than with a sword. Read once a
+     * strike, never per tick.
+     */
+    public int strikeInterval() {
+        double[] speed = { BASE_ATTACK_SPEED };
+        getMainHandItem().getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY)
+                .forEach(EquipmentSlot.MAINHAND, (attribute, modifier) -> {
+                    if (attribute.is(Attributes.ATTACK_SPEED) && modifier.operation() == AttributeModifier.Operation.ADD_VALUE) {
+                        speed[0] += modifier.amount();
+                    }
+                });
+        if (speed[0] <= 0.0) return SWORD_STRIKE_INTERVAL * 4;
+        return Math.max(SWORD_STRIKE_INTERVAL, (int) Math.round(SWORD_STRIKE_INTERVAL * SWORD_ATTACK_SPEED / speed[0]));
+    }
+
+    /**
+     * The speed modifier a guard runs at, for its level ({@link #RUN_SPEED}): what a goal hands the
+     * navigation, which multiplies it with the speed attribute, its own pace included.
+     */
+    public double runSpeed() {
+        return RUN_SPEED[villagerLevel()] / BASE_SPEED;
+    }
+
+    /** Whether the guard may strike now: its last strike's interval is over. */
+    public boolean mayStrike() {
+        return tickCount >= nextStrike;
+    }
+
+    /** Ticks until it may strike again; 0 when it may now. */
+    public int ticksUntilStrike() {
+        return Math.max(0, nextStrike - tickCount);
+    }
+
+    /** It just struck: the next strike waits {@link #strikeInterval()}. */
+    public void struck() {
+        nextStrike = tickCount + strikeInterval();
+    }
 
     /** Whether the main hand holds a bow, which the guard shoots instead of closing in. */
     public boolean holdsBow() {

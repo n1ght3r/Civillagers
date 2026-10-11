@@ -10,16 +10,16 @@ import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
  * searches a new path every few ticks while its target moves at all; this one keeps vanilla's strike and
  * stopping rules but searches through {@link GuardCombatPath}, so only when the target has really moved,
  * and within the per-tick budget.
+ *
+ * <p>It strikes once every {@link Guard#strikeInterval()} ticks: 20 with a sword, as vanilla's mobs, and
+ * slower with a slower weapon. The wait is kept on the guard, not here, so a fight that starts over (a new
+ * target, the same one picked again) strikes no sooner; vanilla's goal would strike at once.
  */
 public final class GuardMeleeGoal extends MeleeAttackGoal {
-    /** Faster than a patrol: a guard runs to a fight. */
-    static final double SPEED = 0.75;
-    /** Ticks between two strikes, as vanilla's melee goal has it. */
-    private static final int ATTACK_INTERVAL = 20;
-
+    /** What vanilla's goal is built with; unused, as the guard runs at its level's speed ({@link Guard#runSpeed()}). */
+    private static final double SPEED = 0.52;
     private final Guard guard;
     private final GuardCombatPath path;
-    private int attackCooldown;
 
     public GuardMeleeGoal(Guard guard) {
         super(guard, SPEED, true);
@@ -46,7 +46,6 @@ public final class GuardMeleeGoal extends MeleeAttackGoal {
     public void start() {
         super.start();
         path.reset();
-        attackCooldown = 0;
     }
 
     @Override
@@ -54,30 +53,30 @@ public final class GuardMeleeGoal extends MeleeAttackGoal {
         LivingEntity target = guard.getTarget();
         if (target == null) return;
         guard.getLookControl().setLookAt(target, 30.0F, 30.0F);
-        if (!guard.isWithinMeleeAttackRange(target)) path.follow(target, SPEED);
-        if (attackCooldown > 0) attackCooldown--;
+        if (!guard.isWithinMeleeAttackRange(target)) path.follow(target, guard.runSpeed());
         checkAndPerformAttack(target);
     }
 
-    // Vanilla keeps its strike cooldown private and counts it down in its own tick, which this replaces.
+    // Vanilla keeps its strike cooldown private, counts it down in its own tick, which this replaces, and
+    // clears it when the goal starts; the guard keeps its own instead.
 
     @Override
     protected boolean isTimeToAttack() {
-        return attackCooldown <= 0;
+        return guard.mayStrike();
     }
 
     @Override
     protected void resetAttackCooldown() {
-        attackCooldown = ATTACK_INTERVAL;
+        guard.struck();
     }
 
     @Override
     protected int getTicksUntilNextAttack() {
-        return attackCooldown;
+        return guard.ticksUntilStrike();
     }
 
     @Override
     protected int getAttackInterval() {
-        return ATTACK_INTERVAL;
+        return guard.strikeInterval();
     }
 }

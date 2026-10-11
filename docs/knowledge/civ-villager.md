@@ -7,6 +7,7 @@ and an addon's own. A role extends it and adds only what makes it that role.
 
 | What | How |
 |---|---|
+| Pace | A villager's speed (0.5), each with its own pace up to 5% either way, drawn once and saved (`speedVariant`) |
 | Look and voice | Villager sounds, a villager's 20 health (`createVillagerAttributes()`), opens doors, picks nothing up, never despawns |
 | Clothes | Its [villager type](villager-type.md), from the biome it spawns in; saved, synced, drawn by `CivVillagerRenderer` |
 | Villager life | Civilians flee and hide, an armed guard rallies, all meet at the bell, celebrate and shake their heads: [villager-life.md](villager-life.md). `isCombatant()` says which |

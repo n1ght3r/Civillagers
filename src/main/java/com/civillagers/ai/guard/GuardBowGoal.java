@@ -20,7 +20,6 @@ import java.util.EnumSet;
  * out of sight, the guard closes in through {@link GuardCombatPath}.
  */
 public final class GuardBowGoal extends Goal {
-    private static final double SPEED = 0.6;
     private static final float RANGE = 15.0F;
     private static final double RANGE_SQR = RANGE * RANGE;
     /** Ticks between the end of one shot and the next draw. */
@@ -76,7 +75,7 @@ public final class GuardBowGoal extends Goal {
         if (distance <= RANGE_SQR && seeTime >= 20) {
             guard.getNavigation().stop();
         } else {
-            path.follow(target, SPEED);
+            path.follow(target, guard.runSpeed());
         }
         guard.getLookControl().setLookAt(target, 30.0F, 30.0F);
 

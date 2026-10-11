@@ -18,7 +18,6 @@ import java.util.EnumSet;
  * <p>A path from {@link GuardPathBudget}, searched again only when the last one ended short of the bell.
  */
 public final class GuardRallyGoal extends Goal {
-    private static final double SPEED = 0.7;
     /** Close enough to the bell, horizontally. */
     private static final double AT_BELL_SQR = 4.0 * 4.0;
     private static final int REPATH = 40;
@@ -69,6 +68,6 @@ public final class GuardRallyGoal extends Goal {
         ServerLevel level = guard.serverLevel();
         if (level == null || !GuardPathBudget.tryTake(level.getGameTime())) return;
         repath = REPATH;
-        guard.getNavigation().moveTo(bell.getX() + 0.5, bell.getY(), bell.getZ() + 0.5, SPEED);
+        guard.getNavigation().moveTo(bell.getX() + 0.5, bell.getY(), bell.getZ() + 0.5, guard.runSpeed());
     }
 }

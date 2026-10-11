@@ -12,6 +12,7 @@ import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -210,6 +211,73 @@ public final class GuardLevelGameTest {
         zombie.discard();
         guard.aiStep();
         TestFixtures.check(helper, guard.getTarget() == null, "a guard should let go of a target that is gone");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void onlyAMasterAlwaysOutrunsAVindicator(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        double vindicator = 0.35;
+        double previous = 0.0;
+        for (int level = 1; level <= Guard.MAX_LEVEL; level++) {
+            guard.setVillagerLevel(level);
+            guard.setSpeedVariant(-Guard.SPEED_VARIANT_RANGE);
+            double slowest = guard.getAttributeValue(Attributes.MOVEMENT_SPEED) * guard.runSpeed();
+            guard.setSpeedVariant(Guard.SPEED_VARIANT_RANGE);
+            double fastest = guard.getAttributeValue(Attributes.MOVEMENT_SPEED) * guard.runSpeed();
+            TestFixtures.check(helper, slowest > previous, "level " + level + " runs faster than the level below");
+            previous = slowest;
+            if (level < Guard.MAX_LEVEL) {
+                guard.setSpeedVariant(0);
+                double middle = guard.getAttributeValue(Attributes.MOVEMENT_SPEED) * guard.runSpeed();
+                TestFixtures.check(helper, middle < vindicator, "a level " + level + " guard of middling pace runs slower than a vindicator, not " + middle);
+            } else {
+                TestFixtures.check(helper, slowest > vindicator, "a master always outruns a vindicator, not " + slowest);
+            }
+            if (level == 1) {
+                TestFixtures.check(helper, slowest > 0.25 && fastest < 0.30, "a novice runs a little faster than a villager walks (0.25)");
+            }
+        }
+        helper.succeed();
+    }
+
+    @GameTest
+    public void eachGuardHasAPaceOfItsOwn(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        java.util.Set<Integer> paces = new java.util.HashSet<>();
+        for (int i = 0; i < 10; i++) {
+            Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+            int pace = guard.speedVariant();
+            paces.add(pace);
+            TestFixtures.check(helper, Math.abs(pace) <= Guard.SPEED_VARIANT_RANGE, "a pace stays within five percent");
+            TestFixtures.check(helper, Math.abs(guard.getAttributeValue(Attributes.MOVEMENT_SPEED) - Guard.BASE_SPEED * (1 + pace / 1000.0)) < 1.0E-6,
+                    "and moves the guard's speed by as much");
+            guard.discard();
+        }
+        TestFixtures.check(helper, paces.size() > 3, "guards do not all walk alike: " + paces);
+
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.setSpeedVariant(37);
+        TestFixtures.MemorySave saved = new TestFixtures.MemorySave();
+        guard.saveExtra(saved);
+        Guard reloaded = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        reloaded.loadExtra(saved);
+        TestFixtures.check(helper, reloaded.speedVariant() == 37, "a guard keeps its pace through a reload");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void armorCountsOnAGuardAsOnAPlayer(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        guard.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.NETHERITE_CHESTPLATE));
+        guard.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
+        // Vanilla applies worn gear's modifiers on the wearer's next tick.
+        guard.tick();
+        TestFixtures.check(helper, guard.getArmorValue() == 8 + 5, "a netherite chestplate and iron leggings give 13 armor, not " + guard.getArmorValue());
+        TestFixtures.check(helper, Math.abs(guard.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE) - 0.1) < 1.0E-6,
+                "and netherite, the one armor that has it, its knockback resistance, not " + guard.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
         helper.succeed();
     }
 
