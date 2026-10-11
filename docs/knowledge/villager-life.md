@@ -18,7 +18,7 @@ for none, and flees and hides like any villager; being hurt still calls the guar
 |---|---|---|
 | Runs from zombies, vexes, zoglins and raiders that come close, and panics when hurt | Civilians the same, at vanilla's distances (8 to 12 blocks); combatants stand their ground | `CivPanicGoal` (1) |
 | Hides at home when a bell rings, and during a raid | Civilians go to the nearest bed and stay there while the alarm (15 s) or the raid lasts | `CivHideGoal` (2) |
-| (nothing: a villager hides) | An armed guard runs to the bell that rang and stands by it; during a raid it hunts the raiders instead | `GuardRallyGoal` (3), `GuardRaidGoal` (3) |
+| (nothing: a villager hides) | An armed guard runs to the bell that rang and stands by it; during a raid it goes after the raiders in its village instead | `GuardRallyGoal` (3), `GuardRaidGoal` (3) |
 | Celebrates a raid won: jumps, cheers, fireworks | The same, until the raid is over | `CivCelebrateGoal` (3) |
 | Gathers at the bell in the meeting hours (9000 to 11000) and gossips | Walks to a bell of its village now and then in those hours and turns to the one nearest it; each turns only its own head, so two side by side face each other and a third never pulls a head back and forth | `CivMeetGoal` (6) |
 | Trades, levels up from novice to master, shows its level on its belt | A guard the same, with trades of its own, and it also levels up from what it kills ([guard.md](guard.md#levels)) | `Guard` (a `Merchant`), `GuardTradeGoal` (1) |

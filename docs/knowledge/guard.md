@@ -29,18 +29,22 @@ covers only what makes it a guard.
   villagers at the bell. Paths avoid water (a step into it costs twice vanilla's), so it takes bridges.
   **Night**: sleeps in a free bed. **Bell**: runs to it, outside a raid. See
   [villager-life.md](villager-life.md).
-- **Raid**: each armed guard goes for the raider nearest it, within 96 blocks: one within 24 blocks is its
-  target at once, seen or not, and it walks towards one farther off. Raiders come in at the edge of the
-  village and go from door to door, so the guards meet them there and spread over them instead of
-  gathering by the bell, the raid's center. With no raider in reach it waits near the center. It
-  celebrates when the raid is won.
+- **Home**: like an iron golem, a guard keeps to its village. The last village it stood in is its home;
+  a chase that takes it more than 16 blocks past the edge ends, and it walks back.
+- **Raid**: an armed guard meets the raiders where they come into the village, at the houses, and never
+  goes out to meet the raid. It goes for a raider inside its village, or within 16 blocks of it (one that
+  close is its target at once, seen or not), and walks towards one farther in. With none in reach it
+  patrols; it does not gather at the bell. It celebrates when the raid is won.
+- **Protects villagers first**: a mob or raider going after a villager counts as half as far, so it is
+  the one a guard picks; and zombies and raiders go for a guard in sight before a villager, so the guards
+  draw them off.
 - **Unarmed**: with no weapon it is a civilian: it fights nothing, runs from zombies and raiders, and
   hides when the bell rings.
 - **Fights** hostile mobs it sees within 16 blocks, and whatever hurts it; calls nearby guards when hurt.
   Leaves neutral mobs alone, and creepers to guards with a bow or crossbow; an addon can change that
   (`GuardEvents.IS_THREAT`). Raises its shield against archers and against a creeper about to blow.
-- **Is hunted** by zombies and fighting raiders, as villagers are. A zombie that kills it may turn it into
-  a [zombie guard](zombie-guard.md).
+- **Is hunted** by zombies and fighting raiders, before the villagers. A zombie that kills it may turn it
+  into a [zombie guard](zombie-guard.md).
 - **Idles** with no player within 48 blocks: no patrol, no looking around, fewer target scans, and at
   rest its AI and movement run one tick in four. Budgets: [docs/ROADMAP.md](../ROADMAP.md), phase 2.
 

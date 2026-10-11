@@ -102,6 +102,14 @@ final class TestFixtures {
         //return EntityType.ZOMBIE;
     }
 
+    /** The villager's entity type; see {@link #zombie()}. */
+    static EntityType<? extends Mob> villager() {
+        //? if >=26.2 {
+        return net.minecraft.world.entity.EntityTypes.VILLAGER;
+        //?} else
+        //return EntityType.VILLAGER;
+    }
+
     /** The creeper's entity type; see {@link #zombie()}. */
     static EntityType<? extends Mob> creeper() {
         //? if >=26.2 {

@@ -12,16 +12,19 @@ import net.minecraft.world.entity.raid.Raider;
 
 /**
  * The vanilla mobs that go after guards the way they go after villagers and iron golems: zombies, and
- * the raiders that fight (illagers and ravagers). Each gets one more target goal beside its own, at the
- * priority vanilla gives its villager and golem targets, and seeing the guard first. Zombified piglins
+ * the raiders that fight (illagers and ravagers). Each gets one more target goal beside its own, ahead of
+ * its villager and golem targets ({@link #PRIORITY}), and seeing the guard first. Zombified piglins
  * are left out, being neutral, and drowned, which only hunt from the water; witches, which only throw
  * potions at players, too.
  *
  * <p>Called from {@code MobMixin} once a mob has registered its own goals, on the server only.
  */
 public final class GuardEnemies {
-    /** The priority of vanilla's villager and iron golem targets in a zombie's and an illager's goals. */
-    private static final int PRIORITY = 3;
+    /**
+     * Before vanilla's villager and iron golem targets (3) and beside the player's (2): a guard in sight is
+     * the one these mobs go for, drawing them off the villagers it protects.
+     */
+    public static final int PRIORITY = 2;
 
     private GuardEnemies() { }
 

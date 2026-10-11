@@ -16,11 +16,15 @@ import com.civillagers.api.Verdict;
 import com.civillagers.entity.CivVillager;
 import com.civillagers.platform.Vanilla;
 import com.civillagers.platform.ZombieVillagerOffers;
+import com.civillagers.village.Village;
+import com.civillagers.village.Villages;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -47,6 +51,7 @@ import net.minecraft.world.entity.animal.golem.IronGolem;
 import net.minecraft.world.entity.monster.Creeper;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.monster.zombie.ZombieVillager;
+import net.minecraft.world.entity.npc.villager.AbstractVillager;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantMenu;
@@ -91,6 +96,10 @@ import java.util.function.Predicate;
  * A new level adds no stat: it upgrades the guard's own gear ({@link GuardGear}) and teaches it two more
  * trades. A spawn egg makes a guard of any level, at random.
  *
+ * <p><b>Home.</b> Like an iron golem, a guard keeps to its village: the last one it stood in is its home,
+ * and it gives up a chase more than {@link #LEASH} blocks past the edge and walks back. It defends the
+ * villagers first: a mob going after one is the target it picks before a nearer one.
+ *
  * <p><b>Its own gear and a player's.</b> What a guard wears for its level is its own: it never drops,
  * never wears out, and nobody takes it off. A piece a player hands over goes on top of it, always drops,
  * and is the one piece the player can take back; the guard's own piece waits under it, keeps upgrading
@@ -127,6 +136,12 @@ public class Guard extends CivVillager implements Merchant {
     /** Game ticks between two restocks of its trades: twice a day, as often as a villager at most. */
     public static final long RESTOCK_INTERVAL = 12_000L;
     private static final int RESTOCK_CHECK_INTERVAL = 100;
+    /** How far past its village's edge, in blocks, a guard follows a fight before it turns back, as a golem keeps to its village. */
+    public static final double LEASH = 16.0;
+    /** Ticks between two looks at which village the guard stands in, and at how far it strayed. */
+    private static final int HOME_CHECK_INTERVAL = 20;
+    /** A mob going after a villager counts as this much nearer, squared: a guard protects villagers first. */
+    private static final double DEFENDS_VILLAGERS = 0.25;
     /** Ticks of regeneration a new level gives, as it gives a villager. */
     private static final int LEVEL_UP_REGENERATION = 200;
 
@@ -135,6 +150,8 @@ public class Guard extends CivVillager implements Merchant {
     private static final String OFFERS_KEY = "offers";
     private static final String RESTOCK_KEY = "last_restock";
     private static final String OWN_GEAR_KEY = "own_";
+    private static final String HOME_KEY = "home";
+    private static final String HOME_RADIUS_KEY = "home_radius";
     /** Synced, so clients draw the badge of its level. */
     private static final EntityDataAccessor<Integer> LEVEL = SynchedEntityData.defineId(Guard.class, EntityDataSerializers.INT);
 
@@ -146,6 +163,9 @@ public class Guard extends CivVillager implements Merchant {
     private int levelUpIn;
     /** The game time of the last restock; 0 until the first look. */
     private long lastRestock;
+    /** The center and radius of the village the guard last stood in: its home, which it keeps to. No home: radius 0. */
+    private long homeCenter;
+    private int homeRadius;
     /** The guard's own gear under a player's, by {@link GuardGear#SLOTS}; empty where none is under. */
     private final ItemStack[] ownUnder = new ItemStack[GuardGear.SLOTS.length];
 
@@ -225,6 +245,7 @@ public class Guard extends CivVillager implements Merchant {
                 if (canLevelUp()) levelUpIn = LEVEL_UP_DELAY;
             }
             if (tickCount % RESTOCK_CHECK_INTERVAL == 0) restockIfDue();
+            if ((tickCount + getId()) % HOME_CHECK_INTERVAL == 0) keepToHome();
         }
         super.aiStep();
     }
@@ -239,7 +260,8 @@ public class Guard extends CivVillager implements Merchant {
 
     /**
      * The nearest hostile mob within {@link #THREAT_RANGE} that this guard can see and
-     * {@linkplain #goesAfter goes after}, or null. One bounded box query; the caller rate-limits it.
+     * {@linkplain #goesAfter goes after}, or null; one going after a villager counts as half as far, so the
+     * guard takes it first. One bounded box query; the caller rate-limits it.
      */
     public LivingEntity findThreat() {
         AABB box = getBoundingBox().inflate(THREAT_RANGE, THREAT_HEIGHT, THREAT_RANGE);
@@ -252,7 +274,7 @@ public class Guard extends CivVillager implements Merchant {
             for (int i = 0; i < mobs.size(); i++) {
                 Mob mob = mobs.get(i);
                 if (mob == null || !goesAfter(mob, ranged)) continue;
-                double distance = distanceToSqr(mob);
+                double distance = distanceToSqr(mob) * (attacksVillager(mob) ? DEFENDS_VILLAGERS : 1.0);
                 if (distance < nearestDistance) {
                     nearest = mob;
                     nearestDistance = distance;
@@ -263,6 +285,12 @@ public class Guard extends CivVillager implements Merchant {
             mobs.set(mobs.indexOf(nearest), null);
         }
         return null;
+    }
+
+    /** Whether {@code mob} is going after a villager, or a villager of the mod that does not fight. */
+    public static boolean attacksVillager(Mob mob) {
+        LivingEntity target = mob.getTarget();
+        return target instanceof AbstractVillager || target instanceof CivVillager villager && !villager.isCombatant();
     }
 
     /**
@@ -286,6 +314,44 @@ public class Guard extends CivVillager implements Merchant {
         if (!(mob instanceof Enemy) || !mob.isAlive() || mob.isInvisible()) return false;
         if (mob instanceof NeutralMob) return false;
         return ranged || !(mob instanceof Creeper);
+    }
+
+    // Home.
+
+    /**
+     * Keeps to its village, as an iron golem does: notes the village it stands in as its home, and lets go
+     * of a target it chased more than {@link #LEASH} blocks past the home's edge, to walk back
+     * ({@link GuardPatrolGoal} heads home from outside). One village lookup, a hash read. Public for the gametests.
+     */
+    public void keepToHome() {
+        ServerLevel level = serverLevel();
+        if (level == null) return;
+        Village village = Villages.get(level).villageAt(blockPosition());
+        if (village != null) {
+            homeCenter = village.center().asLong();
+            homeRadius = village.radius();
+        } else if (getTarget() != null && !nearHome(getX(), getZ(), LEASH)) {
+            setTarget(null);
+        }
+    }
+
+    /** Whether the guard has a home village, the last one it stood in. */
+    public boolean hasHome() {
+        return homeRadius > 0;
+    }
+
+    /** The center of its home village; meaningful only with {@link #hasHome()}. */
+    public BlockPos homeCenter() {
+        return BlockPos.of(homeCenter);
+    }
+
+    /** Whether {@code x}, {@code z} is within {@code margin} blocks of its home village's edge; always, with no home. */
+    public boolean nearHome(double x, double z, double margin) {
+        if (!hasHome()) return true;
+        double dx = x - (BlockPos.getX(homeCenter) + 0.5);
+        double dz = z - (BlockPos.getZ(homeCenter) + 0.5);
+        double reach = homeRadius + margin;
+        return dx * dx + dz * dz <= reach * reach;
     }
 
     // Weapons.
@@ -651,6 +717,8 @@ public class Guard extends CivVillager implements Merchant {
         output.putInt(LEVEL_KEY, villagerLevel());
         output.putInt(XP_KEY, xp);
         output.putLong(RESTOCK_KEY, lastRestock);
+        output.putLong(HOME_KEY, homeCenter);
+        output.putInt(HOME_RADIUS_KEY, homeRadius);
         if (!offers.isEmpty()) output.store(OFFERS_KEY, MerchantOffers.CODEC, offers);
         for (int i = 0; i < GuardGear.SLOTS.length; i++) {
             if (!ownUnder[i].isEmpty()) output.store(OWN_GEAR_KEY + GuardGear.SLOTS[i].getName(), ItemStack.CODEC, ownUnder[i]);
@@ -663,6 +731,8 @@ public class Guard extends CivVillager implements Merchant {
         setVillagerLevel(input.getInt(LEVEL_KEY, 1));
         xp = Math.max(input.getInt(XP_KEY, 0), 0);
         lastRestock = input.getLong(RESTOCK_KEY, 0L);
+        homeCenter = input.getLong(HOME_KEY, 0L);
+        homeRadius = Math.max(input.getInt(HOME_RADIUS_KEY, 0), 0);
         offers = input.read(OFFERS_KEY, MerchantOffers.CODEC).orElseGet(MerchantOffers::new);
         for (int i = 0; i < GuardGear.SLOTS.length; i++) {
             ownUnder[i] = input.read(OWN_GEAR_KEY + GuardGear.SLOTS[i].getName(), ItemStack.CODEC).orElse(ItemStack.EMPTY);

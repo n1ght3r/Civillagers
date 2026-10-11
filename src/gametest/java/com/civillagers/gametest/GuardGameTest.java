@@ -492,6 +492,58 @@ public final class GuardGameTest {
     }
 
     @GameTest
+    public void aGuardKeepsToItsVillageInARaid(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        BlockPos bell = helper.absolutePos(new BlockPos(4, 2, 4));
+        helper.setBlock(new BlockPos(4, 2, 4), Blocks.BELL);
+        Villages villages = Villages.get(helper.getLevel());
+        Village village = villages.addAnchor(bell, 0L);
+        try {
+            Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+            guard.keepToHome();
+            TestFixtures.check(helper, guard.hasHome(), "a guard in a village makes it its home");
+            net.minecraft.world.entity.raid.Raider inside = (net.minecraft.world.entity.raid.Raider) helper.spawnWithNoFreeWill(TestFixtures.vindicator(), new BlockPos(3, 2, 3));
+            net.minecraft.world.entity.raid.Raider outside = (net.minecraft.world.entity.raid.Raider) helper.spawnWithNoFreeWill(TestFixtures.vindicator(), new BlockPos(5, 2, 5));
+            // Well inside the village but past the guard's reach, and far out of it.
+            inside.setPos(guard.getX() + 24.0, guard.getY(), guard.getZ());
+            outside.setPos(bell.getX() + village.radius() + 30.0, guard.getY(), bell.getZ());
+            TestFixtures.check(helper, com.civillagers.ai.guard.GuardRaidGoal.nearestRaider(guard, List.of(outside, inside)) == inside,
+                    "a guard goes for a raider in its village, not one out beyond it");
+            inside.discard();
+            TestFixtures.check(helper, com.civillagers.ai.guard.GuardRaidGoal.nearestRaider(guard, List.of(outside)) == null,
+                    "it never goes out to meet the raid");
+
+            // A chase that takes it far past the edge ends, and it walks back.
+            guard.setTarget(outside);
+            guard.setPos(bell.getX() + village.radius() + Guard.LEASH + 8.0, guard.getY(), bell.getZ());
+            guard.keepToHome();
+            TestFixtures.check(helper, guard.getTarget() == null, "a guard gives up a chase far outside its village");
+            BlockPos.MutableBlockPos point = new BlockPos.MutableBlockPos();
+            if (GuardPatrolGoal.pickPoint(helper.getLevel(), guard, guard.getRandom(), point)) {
+                TestFixtures.check(helper, point.distSqr(bell) < guard.blockPosition().distSqr(bell), "and walks back towards it");
+            }
+        } finally {
+            villages.removeAnchor(village, bell.asLong(), 0L);
+        }
+        helper.succeed();
+    }
+
+    @GameTest
+    public void aGuardDefendsTheVillagersFirst(GameTestHelper helper) {
+        TestFixtures.floor(helper, 1);
+        Guard guard = helper.spawnWithNoFreeWill(CivEntities.guard(), GUARD);
+        Mob villager = helper.spawnWithNoFreeWill(TestFixtures.villager(), new BlockPos(7, 2, 7));
+        net.minecraft.world.entity.raid.Raider near = (net.minecraft.world.entity.raid.Raider) helper.spawnWithNoFreeWill(TestFixtures.vindicator(), new BlockPos(3, 2, 1));
+        net.minecraft.world.entity.raid.Raider hunting = (net.minecraft.world.entity.raid.Raider) helper.spawnWithNoFreeWill(TestFixtures.vindicator(), new BlockPos(4, 2, 2));
+        hunting.setTarget(villager);
+        TestFixtures.check(helper, Guard.attacksVillager(hunting) && !Guard.attacksVillager(near), "one raider is after the villager");
+        TestFixtures.check(helper, com.civillagers.ai.guard.GuardRaidGoal.nearestRaider(guard, List.of(near, hunting)) == hunting,
+                "a guard goes first for the raider attacking a villager, though another is nearer");
+        TestFixtures.check(helper, GuardEnemies.PRIORITY < 3, "raiders and zombies go for a guard before a villager");
+        helper.succeed();
+    }
+
+    @GameTest
     public void aGuardFindsAFreeBed(GameTestHelper helper) {
         TestFixtures.floor(helper, 1);
         BlockPos head = helper.absolutePos(TestFixtures.placeBed(helper, new BlockPos(4, 2, 4)));

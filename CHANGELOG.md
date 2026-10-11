@@ -39,8 +39,9 @@
   over goes on top of it, always drops, and is the one piece the player can take back. A zombie guard keeps
   its level, experience and trades through the cure.
 - Guards keep out of water: patrol and meeting points are on dry ground only, and paths go round water.
-- In a raid, guards go after the raiders where they are, each the one nearest it, instead of gathering at
-  the bell.
+- Guards keep to their village, as iron golems do: they give up a chase far past its edge and walk back.
+  In a raid they meet the raiders in the village, going first for those attacking villagers, instead of
+  gathering at the bell or running out to the raid. Zombies and raiders go for a guard before a villager.
 - Guards meeting at the bell no longer shake their heads back and forth.
 - For addons: `Guard` moved to `com.civillagers.entity.guard`, and the goals to `com.civillagers.ai.guard`
   and `com.civillagers.ai.villager`.

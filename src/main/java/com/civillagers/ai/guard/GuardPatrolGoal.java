@@ -16,7 +16,8 @@ import java.util.EnumSet;
 /**
  * Walks a guard from one point of its village to another, pausing between them. Points are taken around
  * the village's bells, inside its radius, and never further than {@link #MAX_STEP} from where the guard
- * stands, so a path stays short; a guard outside any village keeps to the ground around it.
+ * stands, so a path stays short; a guard that strayed out of its village walks back towards it, and one
+ * that never had a village keeps to the ground around it.
  *
  * <p>A point is chosen from the heightmap, never by scanning blocks, only in a loaded chunk, and only on
  * dry ground ({@link Ground#onDryGround}). Starting
@@ -94,6 +95,15 @@ public final class GuardPatrolGoal extends Goal {
                 z = at.getZ() + (int) (dz * MAX_STEP / length);
             }
             if (!village.contains(x, z)) return false;
+        } else if (guard.hasHome()) {
+            // Strayed out of its village, after a fight: one step of the way back.
+            BlockPos home = guard.homeCenter();
+            int dx = home.getX() - at.getX();
+            int dz = home.getZ() - at.getZ();
+            double length = Math.sqrt((double) dx * dx + (double) dz * dz);
+            double step = Math.min(length, MAX_STEP);
+            x = at.getX() + (int) (length < 1.0 ? 0 : dx * step / length) + random.nextInt(5) - 2;
+            z = at.getZ() + (int) (length < 1.0 ? 0 : dz * step / length) + random.nextInt(5) - 2;
         } else {
             x = at.getX() + random.nextInt(2 * LONE_STEP + 1) - LONE_STEP;
             z = at.getZ() + random.nextInt(2 * LONE_STEP + 1) - LONE_STEP;
