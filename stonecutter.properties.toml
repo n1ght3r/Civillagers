@@ -26,7 +26,7 @@ deps.modmenu = "11.0.5"
 [neoforge."1.21.1"]
 mod.mc_compat = "[1.21.1,1.21.2)"
 
-deps.neoforge = "21.1.256"
+deps.neoforge = "21.1.262"
 
 ["26.2.x"]
 mod.mc_releases = ["26.2"]
@@ -43,5 +43,5 @@ mod.mc_releases = ["26.3"]
 [fabric."26.3.x"]
 mod.mc_compat = "~26.3"
 
-deps.fabric_api = "0.162.0+26.3"
+deps.fabric_api = "0.163.0+26.3"
 deps.modmenu = "21.0.0"
